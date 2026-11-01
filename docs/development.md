@@ -32,7 +32,7 @@ NEXT_PUBLIC_API_URL=/api NEXT_PUBLIC_WS_URL=/ws NEXT_TELEMETRY_DISABLED=1 npm ru
 
 需要 JDK 23。测试使用与宿主系统匹配的 TDLib JNI，Linux CI 沿用上游 glibc 测试运行库；镜像使用仓库中的 `tdlib/linux_amd64/libtdjni.so`。
 
-设置测试用 `APP_ENV=prod`、独立 `APP_ROOT`、占位 `TELEGRAM_API_ID=1`、`TELEGRAM_API_HASH=test-only-placeholder` 和测试 `TDLIB_PATH`，然后在 `api` 目录运行：
+设置测试用 `APP_ENV=prod`、独立 `APP_ROOT`、占位 `TELEGRAM_API_ID=1`、`TELEGRAM_API_HASH=test-only-placeholder` 和测试 `TDLIB_PATH`，然后在 `api` 目录运行。Gradle 测试任务将数据隔离到 `api/build/test-data`；清理 SQLite 测试数据不会删除编译产物：
 
 ```bash
 ./gradlew test jacocoTestReport shadowJar --no-daemon
