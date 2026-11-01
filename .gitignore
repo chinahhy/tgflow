@@ -1,4 +1,12 @@
 .idea/
+/.tools/
+/.learnings/
+/libs/
+/libs.zip
+/data/
+.env
+web/playwright-report/
+web/test-results/
 **/*.iml
 *.iws
 .DS_Store

@@ -1,4 +1,6 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import { BadgeCheck, LoaderCircle, Network, Unplug } from "lucide-react";
 import Link from "next/link";
@@ -9,12 +11,13 @@ import { usePlatformBindingStatus } from "@/hooks/use-platform-binding-status";
 import { useShareEnabled } from "@/hooks/use-share-enabled";
 
 export function PlatformBindingShortcut() {
+  useLocale();
   const shareEnabled = useShareEnabled();
   const { data, error, isLoading, isBound, isPending } =
     usePlatformBindingStatus();
 
   if (!shareEnabled) {
-    const disabledLabel = "Sharing feature is disabled";
+    const disabledLabel = t("Sharing feature is disabled");
     return (
       <TooltipWrapper content={disabledLabel}>
         <span className="inline-flex cursor-not-allowed">
@@ -33,7 +36,7 @@ export function PlatformBindingShortcut() {
     );
   }
 
-  let label = "Platform node not bound";
+  let label = t("Platform node not bound");
   let icon = <Unplug data-icon="inline-start" />;
 
   if (isLoading) {
@@ -44,8 +47,8 @@ export function PlatformBindingShortcut() {
     icon = <Network data-icon="inline-start" />;
   } else if (isBound) {
     label = data.nodeName
-      ? `Platform node bound: ${data.nodeName}`
-      : "Platform node bound";
+      ? t("Platform node bound: {name}", { name: data.nodeName })
+      : t("Platform node bound");
     icon = <BadgeCheck data-icon="inline-start" />;
   } else if (isPending) {
     label = "Platform node authorization pending";

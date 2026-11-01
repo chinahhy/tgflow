@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useFiles } from "@/hooks/use-files";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
@@ -18,6 +22,7 @@ interface FileListProps {
 }
 
 export default function FileList({ accountId, chatId, link }: FileListProps) {
+  useLocale();
   const useFilesProps = useFiles(accountId, chatId, undefined, link);
   const [currentViewFile, setCurrentViewFile] = useState<
     TelegramFile | undefined
@@ -99,7 +104,8 @@ export default function FileList({ accountId, chatId, link }: FileListProps) {
       return;
     }
     const index = files.findIndex(
-      (f) => f.id === currentViewFile.id || f.uniqueId === currentViewFile.uniqueId,
+      (f) =>
+        f.id === currentViewFile.id || f.uniqueId === currentViewFile.uniqueId,
     );
     if (index === -1) {
       // 只有在drawer关闭时才清除currentViewFile，避免下载完成时意外关闭
@@ -163,7 +169,7 @@ export default function FileList({ accountId, chatId, link }: FileListProps) {
               opacityBase={0.1}
               opacityMid={0.4}
               opacityPeak={0.95}
-              ariaLabel="Loading files"
+              ariaLabel={t("Loading files")}
             />
           </div>
         )}
@@ -190,10 +196,12 @@ export default function FileList({ accountId, chatId, link }: FileListProps) {
                       opacityBase={0.1}
                       opacityMid={0.4}
                       opacityPeak={0.95}
-                      ariaLabel="Loading more files"
+                      ariaLabel={t("Loading more files")}
                     />
                   ) : (
-                    <p className="text-muted-foreground">No more files</p>
+                    <p className="text-muted-foreground">
+                      {t("No more files")}
+                    </p>
                   )}
                 </div>
               );
@@ -217,7 +225,9 @@ export default function FileList({ accountId, chatId, link }: FileListProps) {
                   setIsDrawerOpen(true);
                 }}
                 onFileChange={(updatedFile) => {
-                  void updateField(updatedFile.uniqueId, { tags: updatedFile.tags });
+                  void updateField(updatedFile.uniqueId, {
+                    tags: updatedFile.tags,
+                  });
                 }}
                 layout={layout}
                 {...useFilesProps}

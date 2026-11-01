@@ -1,4 +1,6 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -21,17 +23,13 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import AccountSelect from "@/components/account-select";
 import ChatSelect from "@/components/chat-select";
 import { cn } from "@/lib/utils";
 import AutomationDialog from "@/components/automation-dialog";
 import { Badge } from "@/components/ui/badge";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { Label } from "../ui/label";
@@ -44,6 +42,7 @@ const HEADER_HIDE_DISTANCE = 108;
 const HEADER_SHOW_DISTANCE = 16;
 
 export function MobileHeader() {
+  useLocale();
   const { accountDownloadSpeed } = useWebsocket();
   const { settings } = useSettings();
   const [hidden, setHidden] = useState(false);
@@ -150,7 +149,9 @@ export function MobileHeader() {
               <Download className="h-4 w-4 flex-shrink-0" />
             </div>
           ) : (
-            <h3 className="text-lg font-semibold">Telegram Files Manager</h3>
+            <h3 className="text-lg font-semibold">
+              {t("Telegram Files Manager")}
+            </h3>
           )}
 
           <MenuDrawer />
@@ -161,6 +162,7 @@ export function MobileHeader() {
 }
 
 function MenuDrawer() {
+  useLocale();
   const useTelegramAccountProps = useTelegramAccount();
   const { chat } = useTelegramChat();
   const { connectionStatus, reconnect, telegramConnectionState } =
@@ -182,7 +184,7 @@ function MenuDrawer() {
       <DrawerContent className="w-4/5">
         <div className="flex h-full w-full grow flex-col rounded-[16px] bg-white p-4 shadow-lg dark:bg-zinc-900">
           <DrawerTitle className="mb-6 text-center">
-            Telegram Files Manager
+            {t("Telegram Files Manager")}
           </DrawerTitle>
           <div className="flex h-full flex-col justify-between">
             <div className="flex flex-1 flex-col gap-4">
@@ -192,7 +194,7 @@ function MenuDrawer() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col">
                 <Label className="text-xs font-semibold text-muted-foreground">
-                  Auto Download
+                  {t("Auto Download")}
                 </Label>
                 <div className="py-2">
                   {chat ? (
@@ -203,18 +205,18 @@ function MenuDrawer() {
                       className="w-full"
                       disabled={true}
                     >
-                      No chat selected
+                      {t("No chat selected")}
                     </Button>
                   )}
                 </div>
               </div>
               <div className="flex flex-col">
                 <Label className="text-xs font-semibold text-muted-foreground">
-                  Layout
+                  {t("Layout")}
                 </Label>
                 <div className="py-2">
                   <Toggle
-                    className="w-full h-10 border data-[state=on]:bg-transparent data-[state=on]:hover:bg-muted"
+                    className="h-10 w-full border data-[state=on]:bg-transparent data-[state=on]:hover:bg-muted"
                     pressed={layout === "gallery"}
                     onPressedChange={(pressed) => {
                       setLayout(pressed ? "gallery" : "detailed");
@@ -223,12 +225,12 @@ function MenuDrawer() {
                     {layout === "detailed" ? (
                       <>
                         <List className="h-4 w-4" />
-                        <span className="">Detailed Layout</span>
+                        <span className="">{t("Detailed Layout")}</span>
                       </>
                     ) : (
                       <>
                         <GalleryHorizontal className="h-4 w-4" />
-                        <span className="">Gallery Layout</span>
+                        <span className="">{t("Gallery Layout")}</span>
                       </>
                     )}
                   </Toggle>
@@ -260,18 +262,19 @@ function MenuDrawer() {
                     ) : (
                       <UnplugIcon className="mr-1 h-4 w-4" />
                     )}
-                    {connectionStatus}
+                    {t(connectionStatus)}
                   </Badge>
 
                   {telegramConnectionState &&
                     telegramConnectionState !== "ready" && (
                       <Badge variant="secondary">
                         <UnplugIcon className="mr-1 h-4 w-4" />
-                        {telegramConnectionState}
+                        {t(telegramConnectionState)}
                       </Badge>
                     )}
                 </div>
 
+                <LanguageSwitcher />
                 <ThemeToggleButton />
                 <SettingsDialog />
               </div>

@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import OrbitingCircles from "@/components/ui/orbiting-circles";
 import {
   FileImage,
@@ -19,16 +23,17 @@ const SolidFileIcon = ({ className }: { className: string }) => (
 );
 
 export default function FileNotFount() {
+  useLocale();
   return (
     <div className="relative flex h-full min-h-[calc(100vh-17rem)] w-full flex-col items-center justify-center overflow-hidden">
       <SolidFileIcon className="h-10 w-10 text-muted-foreground" />
       <div className="absolute bottom-1/3 left-1/2 z-0 -translate-x-1/2 transform-gpu text-center">
         <span className="pointer-events-none whitespace-pre-wrap bg-gradient-to-b from-black to-gray-300 bg-clip-text text-center text-xl font-semibold leading-none text-transparent dark:from-white dark:to-black">
-          No files found
+          {t("No files found")}
         </span>
         <p className="pointer-events-none text-center text-xs text-muted-foreground">
-          Your search did not match any files. <br />
-          Try searching for something else.
+          {t("Your search did not match any files.")} <br />
+          {t("Try searching for something else.")}
         </p>
       </div>
 

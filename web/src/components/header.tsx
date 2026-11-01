@@ -1,4 +1,6 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -21,6 +23,7 @@ import AutomationDialog from "@/components/automation-dialog";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import AccountSelect from "@/components/account-select";
 import { useSearchParams } from "next/navigation";
@@ -28,6 +31,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { PlatformBindingShortcut } from "@/components/platform-binding-shortcut";
 
 export function Header() {
+  useLocale();
   const useTelegramAccountProps = useTelegramAccount();
   const {
     connectionStatus,
@@ -65,7 +69,7 @@ export function Header() {
 
           <div className="flex items-center gap-2">
             {accountDownloadSpeed !== 0 && (
-              <TooltipWrapper content="Current account download speed">
+              <TooltipWrapper content={t("Current account download speed")}>
                 <div className="flex items-center gap-2 overflow-hidden text-sm text-muted-foreground">
                   <span className="flex-1 text-nowrap">
                     {`${prettyBytes(accountDownloadSpeed, { bits: settings?.speedUnits === "bits" })}/s`}
@@ -79,8 +83,8 @@ export function Header() {
               <TooltipWrapper
                 content={
                   connectionStatus === "Open"
-                    ? "Live updates connected"
-                    : "Live updates disconnected — click to reconnect"
+                    ? t("Live updates connected")
+                    : t("Live updates disconnected — click to reconnect")
                 }
               >
                 <Badge
@@ -94,7 +98,7 @@ export function Header() {
                   tabIndex={connectionStatus !== "Open" ? 0 : undefined}
                   aria-label={
                     connectionStatus !== "Open"
-                      ? "Reconnect live updates"
+                      ? t("Reconnect live updates")
                       : undefined
                   }
                   onClick={connectionStatus !== "Open" ? reconnect : undefined}
@@ -114,20 +118,21 @@ export function Header() {
                   ) : (
                     <UnplugIcon className="mr-1 h-4 w-4" />
                   )}
-                  {connectionStatus}
+                  {t(connectionStatus)}
                 </Badge>
               </TooltipWrapper>
             )}
 
             {telegramConnectionState && telegramConnectionState !== "ready" && (
-              <TooltipWrapper content="Telegram connection state">
+              <TooltipWrapper content={t("Telegram connection state")}>
                 <Badge variant="secondary">
                   <UnplugIcon className="mr-1 h-4 w-4" />
-                  Telegram: {telegramConnectionState}
+                  {t("Telegram:")} {t(telegramConnectionState)}
                 </Badge>
               </TooltipWrapper>
             )}
 
+            <LanguageSwitcher />
             <ThemeToggleButton />
 
             <PlatformBindingShortcut />

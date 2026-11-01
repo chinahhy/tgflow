@@ -1,3 +1,5 @@
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 import { useCallback, useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import type { TelegramFile } from "@/lib/types";
@@ -15,6 +17,7 @@ export default function useFileSwitch({
   hasMore,
   handleLoadMore,
 }: FileSwitchProps) {
+  useLocale();
   const [direction, setDirection] = useState(0);
 
   const handleNavigation = useCallback(
@@ -29,7 +32,7 @@ export default function useFileSwitch({
         } else {
           toast({
             variant: "info",
-            description: "No more files to load",
+            description: t("No more files to load"),
           });
         }
       }

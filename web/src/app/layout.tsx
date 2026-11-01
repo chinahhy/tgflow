@@ -12,10 +12,11 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LocalStorageProvider } from "@/hooks/use-local-storage";
 import { AdminSessionProvider } from "@/hooks/use-admin-session";
 import { AdminAuthGate } from "@/components/admin-auth-gate";
+import { LanguageProvider } from "@/components/language-provider";
 
 export const metadata: Metadata = {
-  title: "Telegram Files",
-  description: "Manage your files on Telegram",
+  title: "TGFlow",
+  description: "TGFlow · Telegram 文件管理与自动下载",
 };
 
 export default async function RootLayout({
@@ -24,7 +25,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="zh-CN" suppressHydrationWarning>
       <head>
         <link
           rel="icon"
@@ -39,7 +40,7 @@ export default async function RootLayout({
           sizes="180x180"
           href="/apple-touch-icon.png"
         />
-        <meta name="apple-mobile-web-app-title" content="TeleFiles" />
+        <meta name="apple-mobile-web-app-title" content="TGFlow" />
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
@@ -53,28 +54,30 @@ export default async function RootLayout({
             strategy="afterInteractive"
           />
         )}
-        <LocalStorageProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            disableTransitionOnChange
-          >
-            <AdminSessionProvider>
-              <AdminAuthGate>
-                <SWRProvider>
-                  <WebSocketProvider>
-                    <SettingsProvider>
-                      <TelegramAccountProvider>
-                        {children}
-                      </TelegramAccountProvider>
-                    </SettingsProvider>
-                  </WebSocketProvider>
-                </SWRProvider>
-              </AdminAuthGate>
-            </AdminSessionProvider>
-            <Toaster />
-          </ThemeProvider>
-        </LocalStorageProvider>
+        <LanguageProvider>
+          <LocalStorageProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="light"
+              disableTransitionOnChange
+            >
+              <AdminSessionProvider>
+                <AdminAuthGate>
+                  <SWRProvider>
+                    <WebSocketProvider>
+                      <SettingsProvider>
+                        <TelegramAccountProvider>
+                          {children}
+                        </TelegramAccountProvider>
+                      </SettingsProvider>
+                    </WebSocketProvider>
+                  </SWRProvider>
+                </AdminAuthGate>
+              </AdminSessionProvider>
+              <Toaster />
+            </ThemeProvider>
+          </LocalStorageProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

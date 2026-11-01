@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import {
   Select,
   SelectContent,
@@ -18,12 +22,13 @@ export default function AccountSelect({
   account,
   handleAccountChange,
 }: AccountSelectProps) {
+  useLocale();
   const accounts = getAccounts("active");
 
   return (
     <Select value={accountId} onValueChange={handleAccountChange}>
       <SelectTrigger className="w-full md:w-[200px]">
-        <SelectValue placeholder="Select account ...">
+        <SelectValue placeholder={t("Select account ...")}>
           {account ? (
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
@@ -35,7 +40,7 @@ export default function AccountSelect({
               </span>
             </div>
           ) : (
-            `Select account ...`
+            t("Select account ...")
           )}
         </SelectValue>
       </SelectTrigger>

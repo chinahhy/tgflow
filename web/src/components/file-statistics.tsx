@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import React from "react";
 import useSWR from "swr";
 import {
@@ -20,7 +24,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { telegramApi, type TelegramApiArg } from "@/lib/api";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "@/lib/i18n-date";
 import { Button } from "@/components/ui/button";
 import useSWRMutation from "swr/mutation";
 import type { TelegramApiResult } from "@/lib/types"; // Define a fetcher function to handle the API request
@@ -73,11 +77,12 @@ function MetricCard({
   icon: Icon,
   emphasis = "default",
 }: MetricCardProps) {
+  useLocale();
   return (
     <div className="flex min-h-24 flex-col justify-between gap-3 rounded-md border bg-card p-4 shadow-sm transition-colors hover:bg-accent/40">
       <div className="flex items-center justify-between gap-3">
         <span className="truncate text-sm font-medium text-muted-foreground">
-          {label}
+          {t(label)}
         </span>
         <span
           className={
@@ -107,6 +112,7 @@ function SectionTitle({
   title: string;
   description?: React.ReactNode;
 }) {
+  useLocale();
   return (
     <CardHeader className="flex flex-row items-start justify-between gap-3 p-4 pb-3">
       <div className="flex min-w-0 items-center gap-2">
@@ -127,6 +133,7 @@ function SectionTitle({
 }
 
 const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
+  useLocale();
   const { settings } = useSettings();
   // Use SWR for data fetching and caching
   const { data, error, mutate } = useSWR<StatisticsData, Error>(
@@ -151,7 +158,7 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
         <CardContent className="flex items-center gap-3 p-4 text-destructive">
           <AlertTriangle className="size-5" />
           <span className="text-sm font-medium">
-            Failed to load statistics.
+            {t("Failed to load statistics.")}
           </span>
         </CardContent>
       </Card>
@@ -170,9 +177,11 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
             opacityBase={0.1}
             opacityMid={0.4}
             opacityPeak={0.95}
-            ariaLabel="Loading statistics"
+            ariaLabel={t("Loading statistics")}
           />
-          <span className="text-sm font-medium">Loading statistics...</span>
+          <span className="text-sm font-medium">
+            {t("Loading statistics...")}
+          </span>
         </CardContent>
       </Card>
     );
@@ -286,8 +295,8 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
       <Card>
         <SectionTitle
           icon={CloudDownload}
-          title="Download Statistics"
-          description="Current file inventory and transfer state"
+          title={t("Download Statistics")}
+          description={t("Current file inventory and transfer state")}
         />
         <CardContent className="grid grid-cols-1 gap-3 p-4 pt-0 sm:grid-cols-2 xl:grid-cols-5">
           {statusMetrics.map((metric) => (
@@ -299,8 +308,8 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
       <Card>
         <SectionTitle
           icon={Clock}
-          title="Speed Statistics"
-          description={`${intervalMinutes} minute interval`}
+          title={t("Speed Statistics")}
+          description={t("{count} minute interval", { count: intervalMinutes })}
         />
         <CardContent className="grid grid-cols-1 gap-3 p-4 pt-0 sm:grid-cols-2 xl:grid-cols-4">
           {avgStatFields.map((stat, index) => (
@@ -319,14 +328,14 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
         <Card className="xl:col-span-2">
           <SectionTitle
             icon={CheckCircle}
-            title="Completed by Type"
-            description="Downloaded files grouped by media class"
+            title={t("Completed by Type")}
+            description={t("Downloaded files grouped by media class")}
           />
           <CardContent className="p-4 pt-0">
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {completedTypes.map((type) => (
                 <li
-                  key={type.label}
+                  key={t(type.label)}
                   className="flex items-center justify-between gap-3 rounded-md border bg-card p-4 shadow-sm"
                 >
                   <div className="flex min-w-0 items-center gap-3">
@@ -334,7 +343,7 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
                       <type.icon className="size-4" />
                     </span>
                     <span className="truncate text-sm font-medium text-muted-foreground">
-                      {type.label}
+                      {t(type.label)}
                     </span>
                   </div>
                   <div className="text-2xl font-semibold text-foreground">
@@ -349,10 +358,10 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
         <Card>
           <SectionTitle
             icon={Network}
-            title="Network Statistics"
+            title={t("Network Statistics")}
             description={
               <>
-                Since{" "}
+                {t("Since")}{" "}
                 {formatDistanceToNow(
                   new Date(data.networkStatistics.sinceDate * 1000),
                   {
@@ -370,7 +379,7 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
                     <Upload className="size-4" />
                   </span>
                   <span className="text-sm font-medium text-muted-foreground">
-                    Sent
+                    {t("Sent")}
                   </span>
                 </div>
                 <Badge variant="secondary" className="font-mono">
@@ -385,7 +394,7 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
                     <Download className="size-4" />
                   </span>
                   <span className="text-sm font-medium text-muted-foreground">
-                    Received
+                    {t("Received")}
                   </span>
                 </div>
                 <Badge variant="secondary" className="font-mono">
@@ -395,7 +404,9 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
             </div>
             <div className="flex items-center justify-between gap-3 pt-1">
               <p className="text-sm text-muted-foreground">
-                Traffic counters can be reset without changing file history.
+                {t(
+                  "Traffic counters can be reset without changing file history.",
+                )}
               </p>
               <Button
                 variant="outline"
@@ -408,7 +419,7 @@ const FileStatistics: React.FC<FileStatisticsProps> = ({ telegramId }) => {
                   });
                 }}
               >
-                {isResetMutating ? "Resetting..." : "Reset"}
+                {isResetMutating ? t("Resetting...") : t("Reset")}
               </Button>
             </div>
           </CardContent>

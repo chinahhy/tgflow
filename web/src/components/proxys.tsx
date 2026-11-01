@@ -1,4 +1,7 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import React, { useState } from "react";
 import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
@@ -58,6 +61,7 @@ export default function Proxys({
   proxyName,
   onProxyNameChange,
 }: ProxysProps) {
+  useLocale();
   const { settings, updateSettings } = useSettings();
   const [innerProxyName, setInnerProxyName] = useState(proxyName ?? "");
   const [isDialogOpen, setDialogOpen] = useState(false);
@@ -88,8 +92,8 @@ export default function Proxys({
           toast({
             variant: "success",
             description: innerProxyName
-              ? `Proxy is set to ${innerProxyName}`
-              : "Proxy is disabled",
+              ? t("Proxy is set to {name}", { name: innerProxyName })
+              : t("Proxy is disabled"),
           });
         },
       },
@@ -131,7 +135,13 @@ export default function Proxys({
 
   // Delete proxy with confirmation
   const handleDeleteProxy = (proxy: Proxy): void => {
-    if (confirm(`Are you sure you want to delete the proxy ${proxy.name}?`)) {
+    if (
+      confirm(
+        t("Are you sure you want to delete the proxy {name}?", {
+          name: proxy.name,
+        }),
+      )
+    ) {
       const updatedProxys = proxys.filter((p) => p.name !== proxy.name);
       void updateSettings({
         proxys: JSON.stringify({
@@ -168,9 +178,7 @@ export default function Proxys({
       onProxyNameChange?.(innerProxyName);
     }
   };
-  const proxyCountLabel = `${proxys.length} ${
-    proxys.length === 1 ? "proxy" : "proxies"
-  }`;
+  const proxyCountLabel = t("{count} proxies", { count: proxys.length });
 
   return (
     <div className="relative flex h-full flex-col gap-4 pb-16">
@@ -181,11 +189,13 @@ export default function Proxys({
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-normal">Proxies</h1>
+              <h1 className="text-xl font-semibold tracking-normal">
+                {t("Proxies")}
+              </h1>
               <Badge variant="secondary">{proxyCountLabel}</Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Manage saved proxy profiles for Telegram connections.
+              {t("Manage saved proxy profiles for Telegram connections.")}
             </p>
           </div>
         </div>
@@ -193,7 +203,7 @@ export default function Proxys({
           {telegramId && <ProxyPing accountId={telegramId} />}
           <Button onClick={() => handleOpenDialog()}>
             <Plus />
-            Add proxy
+            {t("Add proxy")}
           </Button>
         </div>
       </div>
@@ -203,9 +213,9 @@ export default function Proxys({
             <Unplug className="size-5" />
           </span>
           <div>
-            <p className="font-medium">No proxies added yet</p>
+            <p className="font-medium">{t("No proxies added yet")}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Add a proxy profile or paste one from your clipboard.
+              {t("Add a proxy profile or paste one from your clipboard.")}
             </p>
           </div>
         </div>
@@ -240,7 +250,7 @@ export default function Proxys({
                 {enableSelect && (
                   <Checkbox
                     checked={innerProxyName === proxy.name}
-                    aria-label={`Select ${proxy.name}`}
+                    aria-label={t("Select {name}", { name: proxy.name })}
                   />
                 )}
               </CardTitle>
@@ -255,7 +265,7 @@ export default function Proxys({
               <Button
                 size="icon"
                 variant="ghost"
-                aria-label={`Edit ${proxy.name}`}
+                aria-label={t("Edit {name}", { name: proxy.name })}
                 className="size-8"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -267,7 +277,7 @@ export default function Proxys({
               <Button
                 size="icon"
                 variant="ghost"
-                aria-label={`Delete ${proxy.name}`}
+                aria-label={t("Delete {name}", { name: proxy.name })}
                 className="size-8 text-destructive hover:text-destructive"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -288,7 +298,7 @@ export default function Proxys({
               variant="outline"
               type="button"
             >
-              Cancel
+              {t("Cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -297,7 +307,7 @@ export default function Proxys({
             onClick={() => handleProxySubmit()}
           >
             <Check />
-            Apply proxy
+            {t("Apply proxy")}
           </Button>
         </div>
       )}
@@ -305,13 +315,13 @@ export default function Proxys({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <span>{editingProxy ? "Edit proxy" : "Add proxy"}</span>
+              <span>{editingProxy ? t("Edit proxy") : t("Add proxy")}</span>
               <ProxyParser onParsed={(proxy) => setFormState(proxy)} />
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label>Type</Label>
+              <Label>{t("Type")}</Label>
               <RadioGroup
                 value={formState.type}
                 onValueChange={(value) =>
@@ -340,74 +350,78 @@ export default function Proxys({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>Name</Label>
+              <Label>{t("Name")}</Label>
               <Input
                 name="name"
                 value={formState.name}
                 onChange={handleInputChange}
-                placeholder="Enter proxy name"
+                placeholder={t("Enter proxy name")}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label>Proxy server</Label>
+              <Label>{t("Proxy server")}</Label>
               <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">
-                    Server
+                    {t("Server")}
                   </Label>
                   <Input
                     name="server"
                     value={formState.server}
                     onChange={handleInputChange}
-                    placeholder="Enter server address"
+                    placeholder={t("Enter server address")}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Port</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    {t("Port")}
+                  </Label>
                   <Input
                     name="port"
                     type="number"
                     value={formState.port}
                     onChange={handleInputChange}
-                    placeholder="Enter port number"
+                    placeholder={t("Enter port number")}
                   />
                 </div>
               </div>
             </div>
-            <Label>Authentication (optional)</Label>
+            <Label>{t("Authentication (optional)")}</Label>
             {formState.type === "mtproto" ? (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">Secret</Label>
+                <Label className="text-xs text-muted-foreground">
+                  {t("Secret")}
+                </Label>
                 <Input
                   name="secret"
                   value={formState.secret}
                   onChange={handleInputChange}
-                  placeholder="Enter secret"
+                  placeholder={t("Enter secret")}
                 />
               </div>
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">
-                    Username
+                    {t("Username")}
                   </Label>
                   <Input
                     name="username"
                     value={formState.username}
                     onChange={handleInputChange}
-                    placeholder="Enter username"
+                    placeholder={t("Enter username")}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">
-                    Password
+                    {t("Password")}
                   </Label>
                   <Input
                     name="password"
                     type="password"
                     value={formState.password}
                     onChange={handleInputChange}
-                    placeholder="Enter password"
+                    placeholder={t("Enter password")}
                   />
                 </div>
               </>
@@ -415,10 +429,10 @@ export default function Proxys({
           </div>
           <DialogFooter>
             <Button onClick={handleCloseDialog} variant="outline">
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button onClick={handleSaveProxy}>
-              {editingProxy ? "Save proxy" : "Add proxy"}
+              {editingProxy ? t("Save proxy") : t("Add proxy")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -428,6 +442,7 @@ export default function Proxys({
 }
 
 function ProxyParser({ onParsed }: { onParsed: (proxys: Proxy) => void }) {
+  useLocale();
   const handleParseProxy = async () => {
     const clipboardText = await navigator.clipboard.readText();
     if (!clipboardText || clipboardText.trim().length === 0) {
@@ -437,13 +452,13 @@ function ProxyParser({ onParsed }: { onParsed: (proxys: Proxy) => void }) {
     if (proxy) {
       toast({
         variant: "success",
-        description: "Proxy string is parsed successfully",
+        description: t("Proxy string is parsed successfully"),
       });
       onParsed(proxy);
     } else {
       toast({
         variant: "error",
-        description: "Invalid proxy string format",
+        description: t("Invalid proxy string format"),
       });
     }
   };
@@ -459,10 +474,10 @@ function ProxyParser({ onParsed }: { onParsed: (proxys: Proxy) => void }) {
         <TooltipContent>
           <div className="flex max-w-80 flex-col gap-2 p-2">
             <p className="text-sm font-semibold">
-              Parse a proxy string from the clipboard
+              {t("Parse a proxy string from the clipboard")}
             </p>
             <p className="text-xs text-muted-foreground">
-              The proxy should be in the following format:
+              {t("The proxy should be in the following format:")}
               <br />
               <code>http://username:password@server:port</code>
               <br />

@@ -1,3 +1,7 @@
+"use client";
+import { t, translateError } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { type TelegramFile } from "@/lib/types";
 import useSWRMutation from "swr/mutation";
 import { POST } from "@/lib/api";
@@ -5,8 +9,12 @@ import { toast } from "@/hooks/use-toast";
 
 export function useFileControl(
   file: TelegramFile,
-  updateField?: (uniqueId: string, patch: Partial<TelegramFile>) => Promise<void>,
+  updateField?: (
+    uniqueId: string,
+    patch: Partial<TelegramFile>,
+  ) => Promise<void>,
 ) {
+  useLocale();
   const { trigger: startDownload, isMutating: starting } = useSWRMutation(
     file.source === "SEED"
       ? "/files/start-download-multiple"
@@ -24,26 +32,31 @@ export function useFileControl(
       file.source === "SEED"
         ? "/files/toggle-pause-download-multiple"
         : `/${file.telegramId}/file/toggle-pause-download`,
-      (key: string, { arg }: { arg: Record<string, unknown> }) => POST(key, arg),
+      (key: string, { arg }: { arg: Record<string, unknown> }) =>
+        POST(key, arg),
     );
   const { trigger: removeFile, isMutating: removing } = useSWRMutation(
     `/${file.telegramId}/file/remove`,
     (key, { arg }: { arg: { fileId: number; uniqueId: string } }) =>
       POST(key, arg),
   );
-  const { trigger: toggleSeedPauseMutation, isMutating: togglingSeedPause } = useSWRMutation(
-    "/files/toggle-pause-download-multiple",
-    (key: string, { arg }: { arg: Record<string, unknown> }) => POST(key, arg),
-  );
+  const { trigger: toggleSeedPauseMutation, isMutating: togglingSeedPause } =
+    useSWRMutation(
+      "/files/toggle-pause-download-multiple",
+      (key: string, { arg }: { arg: Record<string, unknown> }) =>
+        POST(key, arg),
+    );
   const { trigger: cancelSeedMutation, isMutating: cancellingSeeding } =
     useSWRMutation(
       "/files/cancel-download-multiple",
-      (key: string, { arg }: { arg: Record<string, unknown> }) => POST(key, arg),
+      (key: string, { arg }: { arg: Record<string, unknown> }) =>
+        POST(key, arg),
     );
   const { trigger: setSeedUploadLimitMutation, isMutating: settingSeedLimit } =
     useSWRMutation(
       "/files/set-upload-limit-multiple",
-      (key: string, { arg }: { arg: Record<string, unknown> }) => POST(key, arg),
+      (key: string, { arg }: { arg: Record<string, unknown> }) =>
+        POST(key, arg),
     );
 
   const downloadControl = {
@@ -62,7 +75,7 @@ export function useFileControl(
         if (!file.uniqueId || file.uniqueId.trim() === "") {
           toast({
             variant: "error",
-            description: "☹️Sorry, this file cannot be downloaded",
+            description: t("☹️Sorry, this file cannot be downloaded"),
           });
           return;
         }
@@ -103,11 +116,11 @@ export function useFileControl(
         if (!isPausing && file.downloadStatus !== "completed") {
           toast({
             variant: "error",
-            description: "Please download the file before seeding",
+            description: t("Please download the file before seeding"),
           });
           return;
         }
-        const nextStatus = isPausing ? "PAUSED" : "SEEDING";
+        const nextStatus = isPausing ? t("PAUSED") : t("SEEDING");
         const resourceId =
           file.seedResourceId ??
           (file.uniqueId.startsWith("seed:") ? file.uniqueId.slice(5) : null);
@@ -115,7 +128,7 @@ export function useFileControl(
         if (!resourceId) {
           toast({
             variant: "error",
-            description: "No seeding resource ID found for this file",
+            description: t("No seeding resource ID found for this file"),
           });
           return;
         }
@@ -135,15 +148,15 @@ export function useFileControl(
           }
           toast({
             variant: "success",
-            description: isPausing ? "Seeding paused" : "Seeding resumed",
+            description: isPausing ? t("Seeding paused") : t("Seeding resumed"),
           });
         } catch (error) {
           toast({
             variant: "error",
             description:
               error instanceof Error
-                ? error.message
-                : "Failed to toggle seeding state",
+                ? translateError(error.message)
+                : t("Failed to toggle seeding state"),
           });
         }
       }
@@ -157,7 +170,7 @@ export function useFileControl(
         if (!resourceId) {
           toast({
             variant: "error",
-            description: "No seeding resource ID found for this file",
+            description: t("No seeding resource ID found for this file"),
           });
           return;
         }
@@ -176,15 +189,15 @@ export function useFileControl(
           }
           toast({
             variant: "info",
-            description: "Seeding canceled",
+            description: t("Seeding canceled"),
           });
         } catch (error) {
           toast({
             variant: "error",
             description:
               error instanceof Error
-                ? error.message
-                : "Failed to cancel seeding",
+                ? translateError(error.message)
+                : t("Failed to cancel seeding"),
           });
         }
       }
@@ -197,7 +210,7 @@ export function useFileControl(
         ) {
           toast({
             variant: "error",
-            description: "Upload limit is invalid",
+            description: t("Upload limit is invalid"),
           });
           return false;
         }
@@ -210,7 +223,7 @@ export function useFileControl(
         if (!resourceId) {
           toast({
             variant: "error",
-            description: "No seeding resource ID found for this file",
+            description: t("No seeding resource ID found for this file"),
           });
           return false;
         }
@@ -229,8 +242,8 @@ export function useFileControl(
             variant: "success",
             description:
               uploadLimitBytesPerSecond === 0
-                ? "Upload limit cleared"
-                : "Upload limit updated",
+                ? t("Upload limit cleared")
+                : t("Upload limit updated"),
           });
           return true;
         } catch (error) {
@@ -238,8 +251,8 @@ export function useFileControl(
             variant: "error",
             description:
               error instanceof Error
-                ? error.message
-                : "Failed to update upload limit",
+                ? translateError(error.message)
+                : t("Failed to update upload limit"),
           });
           return false;
         }

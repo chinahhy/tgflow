@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { Archive, Check, ChevronsUpDown, Ellipsis, List } from "lucide-react";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -19,6 +23,7 @@ import { TooltipWrapper } from "@/components/ui/tooltip";
 import useIsMobile from "@/hooks/use-is-mobile";
 
 export default function ChatSelect({ disabled }: { disabled: boolean }) {
+  useLocale();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [archived, setArchived] = useState(false);
@@ -63,7 +68,7 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
           <span className="min-w-0 truncate">{selectedChatName}</span>
         </div>
       ) : (
-        <span className="text-muted-foreground">Select chat ...</span>
+        <span className="text-muted-foreground">{t("Select chat ...")}</span>
       )}
       <ChevronsUpDown className="opacity-50" />
     </Button>
@@ -73,20 +78,22 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
     <Command shouldFilter={false} className="rounded-none">
       <div className="flex w-full border-b bg-muted/30">
         <TooltipWrapper
-          content={archived ? "Show main chats" : "Show archived chats"}
+          content={archived ? t("Show main chats") : t("Show archived chats")}
         >
           <Toggle
             className="h-10 shrink-0 rounded-none border-r px-3"
             pressed={archived}
             onPressedChange={setArchived}
-            aria-label={archived ? "Show main chats" : "Show archived chats"}
+            aria-label={
+              archived ? t("Show main chats") : t("Show archived chats")
+            }
           >
             {archived ? <Archive /> : <List />}
           </Toggle>
         </TooltipWrapper>
         <div className="min-w-0 flex-1">
           <CommandInput
-            placeholder="Search chat..."
+            placeholder={t("Search chat...")}
             className="h-10"
             value={search}
             onValueChange={setSearch}
@@ -141,7 +148,7 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
                     {(chat.name ?? "").length > 0 ? chat.name : chat.id}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {chat.type} • {chat.unreadCount ?? 0} unread
+                    {t(chat.type)} • {chat.unreadCount ?? 0} {t("unread")}
                   </span>
                 </div>
               </div>

@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import type { TelegramFile } from "@/lib/types";
 import { useFileSpeed } from "@/hooks/use-file-speed";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +39,7 @@ export function FileCard({
   onFileChange,
   layout,
 }: FileCardProps) {
+  useLocale();
   const { downloadProgress } = useFileSpeed(file);
   const isGalleryLayout = layout === "gallery";
   return (
@@ -64,7 +69,7 @@ export function FileCard({
           )}
         >
           {file.reactionCount > 0 && (
-            <TooltipWrapper content="Reaction Count">
+            <TooltipWrapper content={t("Reaction Count")}>
               <Badge
                 className={cn(
                   "absolute z-30 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs hover:bg-blue-600",
@@ -92,7 +97,7 @@ export function FileCard({
               <div className="mt-2 flex items-end justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <span className="block truncate text-[11px] font-medium text-white/75">
-                    {prettyBytes(file.size)} • {file.type}
+                    {prettyBytes(file.size)} • {t(file.type)}
                   </span>
                   <div className="flex min-h-5 flex-wrap items-center gap-1.5">
                     <FileStatus file={file} className="justify-start" />
@@ -116,7 +121,7 @@ export function FileCard({
               <div className="flex items-center justify-between">
                 <div className="flex flex-col justify-start gap-0.5">
                   <span className="text-xs text-muted-foreground">
-                    {prettyBytes(file.size)} • {file.type}
+                    {prettyBytes(file.size)} • {t(file.type)}
                   </span>
                   <div className="flex min-h-5 items-center gap-2">
                     <FileSource
@@ -129,10 +134,7 @@ export function FileCard({
                   <div className="flex items-center gap-1">
                     <FileStatus file={file} className="justify-start" />
                     {file.loaded && (
-                      <FileTags
-                        file={file}
-                        onFileChange={onFileChange}
-                      />
+                      <FileTags file={file} onFileChange={onFileChange} />
                     )}
                   </div>
                 </div>

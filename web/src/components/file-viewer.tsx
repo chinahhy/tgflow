@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { type TelegramFile } from "@/lib/types";
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from "./ui/dialog";
@@ -31,6 +35,7 @@ export default function FileViewer({
   handleLoadMore,
   isLoading,
 }: FileViewerProps) {
+  useLocale();
   const [showVideoChrome, setShowVideoChrome] = useState(true);
   const [isVideoChromeHovered, setIsVideoChromeHovered] = useState(false);
   const { handleNavigation, direction } = useFileSwitch({
@@ -124,7 +129,7 @@ export default function FileViewer({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Close file preview"
+                    aria-label={t("Close file preview")}
                     onClick={() => onOpenChange(false)}
                     className="rounded-full border border-white/10 bg-white/10 text-white shadow-2xl backdrop-blur-md hover:bg-white/20 hover:text-white [&_svg]:size-5"
                   >
@@ -142,7 +147,7 @@ export default function FileViewer({
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label="Previous file"
+                      aria-label={t("Previous file")}
                       className="h-12 w-12 rounded-full border border-white/10 bg-white/10 text-white opacity-70 shadow-2xl backdrop-blur-md transition hover:bg-white/20 hover:text-white hover:opacity-100 [&_svg]:size-6"
                       onClick={() => handleNavigation(-1)}
                     >
@@ -162,7 +167,7 @@ export default function FileViewer({
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label="Next file"
+                      aria-label={t("Next file")}
                       className="h-12 w-12 rounded-full border border-white/10 bg-white/10 text-white opacity-70 shadow-2xl backdrop-blur-md transition hover:bg-white/20 hover:text-white hover:opacity-100 [&_svg]:size-6"
                       onClick={() => handleNavigation(1)}
                     >
@@ -200,16 +205,12 @@ export default function FileViewer({
                   isPlayableVideo && "h-dvh w-dvw",
                 )}
                 style={{
-                  maxWidth: isPlayableVideo
-                    ? "100dvw"
-                    : "calc(100vw - 1.5rem)",
-                  maxHeight: isPlayableVideo
-                    ? "100dvh"
-                    : "calc(100vh - 8rem)",
+                  maxWidth: isPlayableVideo ? "100dvw" : "calc(100vw - 1.5rem)",
+                  maxHeight: isPlayableVideo ? "100dvh" : "calc(100vh - 8rem)",
                 }}
               >
                 <VisuallyHidden>
-                  <DialogTitle>File Viewer</DialogTitle>
+                  <DialogTitle>{t("File Viewer")}</DialogTitle>
                 </VisuallyHidden>
                 {isPlayableVideo ? (
                   <FileVideo
@@ -249,7 +250,7 @@ export default function FileViewer({
                   opacityBase={0.1}
                   opacityMid={0.4}
                   opacityPeak={0.95}
-                  ariaLabel="Loading file preview"
+                  ariaLabel={t("Loading file preview")}
                 />
               </div>
             </div>

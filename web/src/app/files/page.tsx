@@ -1,11 +1,16 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import Files from "@/components/files";
 import { Card, CardContent } from "@/components/ui/card";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import Link from "next/link";
 import { PlatformTelegramIcon } from "@/components/platform-telegram-icon";
 
 export default function AccountPage() {
+  useLocale();
   return (
     <div className="container mx-auto px-4 py-6">
       <Card className="mb-6">
@@ -15,8 +20,11 @@ export default function AccountPage() {
               <PlatformTelegramIcon className="size-6" />
             </Link>
 
-            <h3 className="text-lg font-semibold">Telegram Files Manager</h3>
+            <h3 className="text-lg font-semibold">
+              {t("Telegram Files Manager")}
+            </h3>
 
+            <LanguageSwitcher />
             <ThemeToggleButton />
           </div>
         </CardContent>

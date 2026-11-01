@@ -1,4 +1,6 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import { type ReactNode, useEffect, useState } from "react";
 import {
@@ -20,6 +22,7 @@ export function AccountDialog({
   children: ReactNode;
   isAdd?: boolean;
 }) {
+  useLocale();
   const [proxyName, setProxyName] = useState<string | undefined>();
   const { account } = useTelegramAccount();
   const [newAccountId, setNewAccountId] = useState<string | undefined>();
@@ -49,7 +52,7 @@ export function AccountDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Add Telegram Account
+            {t("Add Telegram Account")}
             {(account ?? newAccountId) && (
               <p className="rounded-md bg-gray-100 p-1 text-xs text-muted-foreground dark:bg-gray-800 dark:text-gray-300">
                 {account ? account.id : newAccountId}
@@ -74,8 +77,10 @@ export function AccountDialog({
                 toast({
                   variant: "success",
                   description: proxyName
-                    ? `Proxy is set to ${proxyName} with new account`
-                    : "Proxy is disabled",
+                    ? t("Proxy is set to {name} with new account", {
+                        name: proxyName,
+                      })
+                    : t("Proxy is disabled"),
                 });
               }}
               enableSelect={true}

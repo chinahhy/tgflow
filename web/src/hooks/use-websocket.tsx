@@ -1,4 +1,5 @@
 "use client";
+import { translateError } from "@/lib/i18n";
 
 import {
   createContext,
@@ -142,7 +143,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
           case WebSocketMessageType.ERROR:
             toast({
               variant: "error",
-              description: (payload.data as TelegramError).message,
+              description: translateError(
+                (payload.data as TelegramError).message,
+              ),
             });
             break;
           case WebSocketMessageType.FILE_DOWNLOAD:

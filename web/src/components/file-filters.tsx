@@ -1,3 +1,7 @@
+"use client";
+import { t, formatDate } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
@@ -64,6 +68,7 @@ const SearchFilter = ({
   search: string;
   onChange: (search: string) => void;
 }) => {
+  useLocale();
   const [localSearch, setLocalSearch] = useState(search);
 
   const handleChange = (value: string) => {
@@ -73,10 +78,10 @@ const SearchFilter = ({
 
   return (
     <div className="space-y-2">
-      <Label>Keyword</Label>
+      <Label>{t("Keyword")}</Label>
       <div className="relative">
         <Input
-          placeholder="Search with name or caption"
+          placeholder={t("Search with name or caption")}
           value={localSearch}
           onChange={(e) => handleChange(e.target.value)}
         />
@@ -101,11 +106,12 @@ interface TagsFilterProps {
 }
 
 const TagsFilter = ({ tags, onChange }: TagsFilterProps) => {
+  useLocale();
   const { settings } = useSettings();
 
   return (
     <div className="space-y-2">
-      <Label>Tags</Label>
+      <Label>{t("Tags")}</Label>
       <TagsSelector
         value={tags}
         onChangeAction={onChange}
@@ -122,6 +128,7 @@ interface DateFilterProps {
 }
 
 const DateFilter = ({ dateType, dateRange, onChange }: DateFilterProps) => {
+  useLocale();
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
   const [localType, setLocalType] = useState<"sent" | "downloaded">(
@@ -154,16 +161,16 @@ const DateFilter = ({ dateType, dateRange, onChange }: DateFilterProps) => {
   };
 
   const getDisplayText = () => {
-    if (!dateRange?.[0] && !dateRange?.[1]) return "Select date range";
+    if (!dateRange?.[0] && !dateRange?.[1]) return t("Select date range");
     if (dateRange[0] && dateRange[1]) {
-      return `${format(new Date(dateRange[0]), "LLL dd, y")} - ${format(new Date(dateRange[1]), "LLL dd, y")}`;
+      return `${formatDate(dateRange[0], { dateStyle: "medium" })} - ${formatDate(dateRange[1], { dateStyle: "medium" })}`;
     }
-    return "Date range selected";
+    return t("Date range selected");
   };
 
   return (
     <div className="space-y-2">
-      <Label>Date Filter</Label>
+      <Label>{t("Date Filter")}</Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -173,7 +180,7 @@ const DateFilter = ({ dateType, dateRange, onChange }: DateFilterProps) => {
             <CalendarRange className="mr-2 h-4 w-4" />
             <span className="flex-1">{getDisplayText()}</span>
             <span className="ml-2 rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
-              {localType === "downloaded" ? "Download" : "Sent"}
+              {localType === "downloaded" ? t("Download") : t("Sent")}
             </span>
           </Button>
         </PopoverTrigger>
@@ -190,7 +197,7 @@ const DateFilter = ({ dateType, dateRange, onChange }: DateFilterProps) => {
                 onClick={() => handleTypeChange("sent")}
                 className="flex-1"
               >
-                Sent Date
+                {t("Sent Date")}
               </Button>
               <Button
                 size="sm"
@@ -198,7 +205,7 @@ const DateFilter = ({ dateType, dateRange, onChange }: DateFilterProps) => {
                 onClick={() => handleTypeChange("downloaded")}
                 className="flex-1"
               >
-                Downloaded
+                {t("Downloaded")}
               </Button>
             </div>
             <div className="rounded-md border p-2">
@@ -247,14 +254,26 @@ const PRESETS: {
   description?: string;
   isPremium?: boolean;
 }[] = [
-  { label: "全部", unit: "GB", range: [0, 4] },
+  { label: "All", unit: "GB", range: [0, 4] },
   { label: "< 10 MB", unit: "MB", range: [0, 10] },
   { label: "10-100 MB", unit: "MB", range: [10, 100] },
-  { label: "100 MB-2 GB", unit: "MB", range: [100, 2000], description: "普通上限" },
-  { label: "2 GB-4 GB", unit: "GB", range: [2, 4], isPremium: true, description: "Premium 专属" },
+  {
+    label: "100 MB-2 GB",
+    unit: "MB",
+    range: [100, 2000],
+    description: "Standard limit",
+  },
+  {
+    label: "2 GB-4 GB",
+    unit: "GB",
+    range: [2, 4],
+    isPremium: true,
+    description: "Premium only",
+  },
 ];
 
 const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
+  useLocale();
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [localUnit, setLocalUnit] = useState<SizeUnit>(sizeUnit ?? "MB");
   const [localRange, setLocalRange] = useState<[number, number]>(() => {
@@ -394,12 +413,14 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
   return (
     <div className="space-y-2">
       <div
-        className="flex items-center justify-between cursor-pointer select-none py-1"
+        className="flex cursor-pointer select-none items-center justify-between py-1"
         onClick={() => setIsExpanded((prev) => !prev)}
       >
-        <Label className="cursor-pointer font-medium">File Size Range</Label>
+        <Label className="cursor-pointer font-medium">
+          {t("File Size Range")}
+        </Label>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground font-normal">
+          <span className="text-xs font-normal text-muted-foreground">
             {localRange[0]} - {localRange[1]} {localUnit}
           </span>
           <Button
@@ -425,14 +446,14 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
         <div className="space-y-4 rounded-lg border bg-card p-3.5 shadow-sm transition-all dark:border-zinc-800">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground">
-              Filter Options
+              {t("Filter Options")}
             </span>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-                title="Reset file size filter"
+                title={t("Reset file size filter")}
                 onClick={handleReset}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
@@ -469,7 +490,7 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
                   size="sm"
                   className={cn(
                     "h-7 px-2.5 text-xs font-normal transition-all",
-                    active && "font-medium shadow-xs",
+                    active && "shadow-xs font-medium",
                     p.isPremium &&
                       !active &&
                       "border-amber-500/40 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400",
@@ -479,7 +500,7 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
                   {p.isPremium && (
                     <Sparkles className="mr-1 h-3 w-3 text-amber-500" />
                   )}
-                  {p.label}
+                  {t(p.label)}
                 </Button>
               );
             })}
@@ -487,7 +508,10 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
 
           <div className="flex items-center gap-2 text-xs">
             <div className="flex-1 space-y-1">
-              <span className="text-[11px] text-muted-foreground">Min ({localUnit})</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t("Min (")}
+                {localUnit})
+              </span>
               <Input
                 type="number"
                 min={0}
@@ -501,7 +525,10 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
             </div>
             <span className="mt-4 text-muted-foreground">-</span>
             <div className="flex-1 space-y-1">
-              <span className="text-[11px] text-muted-foreground">Max ({localUnit})</span>
+              <span className="text-[11px] text-muted-foreground">
+                {t("Max (")}
+                {localUnit})
+              </span>
               <Input
                 type="number"
                 min={0}
@@ -532,10 +559,10 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
+          <div className="flex items-center justify-between pt-0.5 text-[11px] text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <span>
-                Range: {localRange[0]} - {localRange[1]} {localUnit}
+                {t("Range:")} {localRange[0]} - {localRange[1]} {localUnit}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -543,25 +570,27 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
                 variant="outline"
                 className="cursor-pointer border-blue-500/30 text-[10px] text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"
                 onClick={() => {
-                  if (localUnit === "GB") handleSliderChange([localRange[0], 2]);
+                  if (localUnit === "GB")
+                    handleSliderChange([localRange[0], 2]);
                   else if (localUnit === "MB")
                     handleSliderChange([localRange[0], 2000]);
                   else handleUnitChange("GB");
                 }}
               >
-                Std 2GB
+                {t("Std 2GB")}
               </Badge>
               <Badge
                 variant="outline"
                 className="cursor-pointer border-amber-500/30 text-[10px] text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
                 onClick={() => {
-                  if (localUnit === "GB") handleSliderChange([localRange[0], 4]);
+                  if (localUnit === "GB")
+                    handleSliderChange([localRange[0], 4]);
                   else if (localUnit === "MB")
                     handleSliderChange([localRange[0], 4000]);
                   else handleUnitChange("GB");
                 }}
               >
-                Premium 4GB
+                {t("Premium 4GB")}
               </Badge>
             </div>
           </div>
@@ -578,19 +607,20 @@ interface SortFilterProps {
 }
 
 const SortFilter = ({ sort, order, onChange }: SortFilterProps) => {
+  useLocale();
   const currentSort = sort ?? "date";
   const currentOrder = order ?? "desc";
 
   const sortOptions = [
-    { value: "date", label: "Sent Date" },
-    { value: "completion_date", label: "Downloaded Date" },
-    { value: "size", label: "File Size" },
-    { value: "reaction_count", label: "Reaction Count" },
+    { value: "date", label: t("Sent Date") },
+    { value: "completion_date", label: t("Downloaded Date") },
+    { value: "size", label: t("File Size") },
+    { value: "reaction_count", label: t("Reaction Count") },
   ] as const;
 
   return (
     <div className="space-y-2">
-      <Label>Sort By</Label>
+      <Label>{t("Sort By")}</Label>
       <div className="flex gap-2">
         <Select
           value={currentSort}
@@ -645,6 +675,7 @@ export default function FileFilters({
   clearFilters,
   showMobileLayoutToggle = false,
 }: FileFiltersProps) {
+  useLocale();
   const noAccountSpecified = telegramId === "-1" && chatId === "-1";
   const [localFilters, setLocalFilters] = useState<FileFilter>(filters);
   const isMobile = useIsMobile();
@@ -805,7 +836,9 @@ export default function FileFilters({
         once: true,
       });
       setTimeout(() => {
-        window.removeEventListener("click", preventGhostClick, { capture: true });
+        window.removeEventListener("click", preventGhostClick, {
+          capture: true,
+        });
       }, 350);
     }
     setTimeout(() => {
@@ -833,11 +866,12 @@ export default function FileFilters({
           <Button
             variant="outline"
             className={cn(
-              "relative gap-2 touch-none select-none",
+              "relative touch-none select-none gap-2",
               isMobile
                 ? cn(
                     "fixed z-40 size-11 rounded-full shadow-lg transition-transform active:scale-95",
-                    isDraggingBtn && "scale-110 shadow-2xl ring-4 ring-primary/40",
+                    isDraggingBtn &&
+                      "scale-110 shadow-2xl ring-4 ring-primary/40",
                     !btnPos &&
                       "bottom-[max(1rem,env(safe-area-inset-bottom))] right-4",
                   )
@@ -856,7 +890,7 @@ export default function FileFilters({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             onClick={handleTriggerClick}
-            aria-label={isMobile ? "Open filters" : undefined}
+            aria-label={isMobile ? t("Open filters") : undefined}
           >
             <Filter />
             {!isMobile && "Filters"}
@@ -879,7 +913,7 @@ export default function FileFilters({
           <DrawerTitle>
             <div className="flex items-center justify-between">
               <span className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                Filters
+                {t("Filters")}
               </span>
               {!noAccountSpecified && (
                 <div className="flex items-center space-x-2">
@@ -887,7 +921,7 @@ export default function FileFilters({
                     htmlFor="offline"
                     className="cursor-pointer text-zinc-500"
                   >
-                    Offline
+                    {t("Offline")}
                   </Label>
                   <Switch
                     id="offline"
@@ -907,7 +941,7 @@ export default function FileFilters({
                     htmlFor="seedOnly"
                     className="cursor-pointer text-zinc-500"
                   >
-                    Seed only
+                    {t("Seed only")}
                   </Label>
                   <Switch
                     id="seedOnly"
@@ -925,8 +959,9 @@ export default function FileFilters({
             </div>
           </DrawerTitle>
           <DrawerDescription className="mb-3">
-            Default search by Telegram Client, you can choose offline to
-            search by local database.
+            {t(
+              "Default search by Telegram Client, you can choose offline to search by local database.",
+            )}
           </DrawerDescription>
 
           <div className="space-y-4 p-0.5">
@@ -934,9 +969,11 @@ export default function FileFilters({
               <div className="rounded-xl border bg-card p-3 shadow-sm">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div>
-                    <Label className="text-sm font-semibold">Layout</Label>
+                    <Label className="text-sm font-semibold">
+                      {t("Layout")}
+                    </Label>
                     <p className="text-xs text-muted-foreground">
-                      Switch how files are shown in the list.
+                      {t("Switch how files are shown in the list.")}
                     </p>
                   </div>
                   <Toggle
@@ -945,17 +982,21 @@ export default function FileFilters({
                     onPressedChange={(pressed) => {
                       setLayout(pressed ? "gallery" : "detailed");
                     }}
-                    aria-label="Toggle file list layout"
+                    aria-label={t("Toggle file list layout")}
                   >
                     {layout === "detailed" ? (
                       <>
                         <List className="h-4 w-4" />
-                        <span className="text-xs font-medium">Detailed</span>
+                        <span className="text-xs font-medium">
+                          {t("Detailed")}
+                        </span>
                       </>
                     ) : (
                       <>
                         <GalleryHorizontal className="h-4 w-4" />
-                        <span className="text-xs font-medium">Gallery</span>
+                        <span className="text-xs font-medium">
+                          {t("Gallery")}
+                        </span>
                       </>
                     )}
                   </Toggle>
@@ -979,7 +1020,7 @@ export default function FileFilters({
 
             {!localFilters.offline && (
               <div className="flex items-center justify-between rounded-md border bg-gray-100/50 px-2 py-3 dark:bg-gray-600/50">
-                <Label htmlFor="notDownload">Filter Not Download</Label>
+                <Label htmlFor="notDownload">{t("Filter Not Download")}</Label>
                 <Switch
                   id="notDownload"
                   checked={localFilters.downloadStatus === "idle"}
@@ -989,7 +1030,7 @@ export default function FileFilters({
                       downloadStatus: checked ? "idle" : undefined,
                     }));
                   }}
-                  aria-label="Not Download"
+                  aria-label={t("Not Download")}
                 />
               </div>
             )}
@@ -1030,9 +1071,9 @@ export default function FileFilters({
         </div>
 
         <DrawerFooter className="shrink-0 border-t bg-background pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <Button onClick={handleApply}>Apply Filters</Button>
+          <Button onClick={handleApply}>{t("Apply Filters")}</Button>
           <Button variant="outline" onClick={handleClear}>
-            Clear Filters
+            {t("Clear Filters")}
           </Button>
         </DrawerFooter>
       </DrawerContent>

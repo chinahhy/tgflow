@@ -1,4 +1,7 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { createContext, useContext, useMemo, useState } from "react";
@@ -31,6 +34,7 @@ interface TelegramChatProviderProps {
 export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
   children,
 }) => {
+  useLocale();
   const [query, setQuery] = useState("");
   const [archived, setArchived] = useState(false);
   const router = useRouter();
@@ -62,7 +66,7 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
     }
     const chat = chats?.find((c) => c.id === newChatId);
     if (!chat) {
-      toast({ variant: "error", description: "Failed to switch chat" });
+      toast({ variant: "error", description: t("Failed to switch chat") });
       return;
     }
     router.push(`/accounts?id=${accountId}&chatId=${newChatId}`);
@@ -89,6 +93,7 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
 };
 
 export function useTelegramChat() {
+  useLocale();
   const context = useContext(TelegramChatContext);
   if (!context) {
     throw new Error(
@@ -99,6 +104,7 @@ export function useTelegramChat() {
 }
 
 export function useMaybeTelegramChat() {
+  useLocale();
   const context = useContext(TelegramChatContext);
   if (!context) {
     return undefined;

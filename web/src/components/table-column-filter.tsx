@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -38,6 +42,7 @@ function SortableItem({
   onToggleVisibility,
   isVisible,
 }: SortableItemProps) {
+  useLocale();
   const { attributes, isDragging, listeners, setNodeRef, transform } =
     useSortable({ id });
 
@@ -57,14 +62,14 @@ function SortableItem({
       }}
     >
       <div className="mr-1">
-        <span className="capitalize">{label}</span>
+        <span className="capitalize">{t(label)}</span>
       </div>
       <Button
         {...attributes}
         {...listeners}
         variant="ghost"
         size="sm"
-        title="Drag and drop to reorder columns"
+        title={t("Drag and drop to reorder columns")}
         className="invisible ml-auto group-hover:visible"
       >
         <Menu className="h-3 w-3" />
@@ -82,6 +87,7 @@ export default function TableColumnFilter({
   columns,
   onColumnConfigChange,
 }: TableColumnFilterProps) {
+  useLocale();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleToggleVisibility = (id: string) => {
@@ -110,7 +116,7 @@ export default function TableColumnFilter({
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger className="select-none" asChild>
-        <Button variant="outline" title="Show/hide columns">
+        <Button variant="outline" title={t("Show/hide columns")}>
           <Columns className="mr-2 h-4 w-4" />
           <span className="text-xs text-muted-foreground">{`(${visibleColumnCount}/${columns.length})`}</span>
           <ChevronDown className="ml-2 h-4 w-4" />

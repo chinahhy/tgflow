@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import type { TelegramFile } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -18,6 +22,7 @@ export function FileSource({
   className?: string;
   showEmpty?: boolean;
 }) {
+  useLocale();
   if (!file.source) {
     return showEmpty ? (
       <span className="text-xs text-muted-foreground">—</span>
@@ -42,10 +47,10 @@ export function FileSource({
         )}
       />
       <span className="font-medium text-foreground">
-        {isSeed ? "Seed" : "Telegram"}
+        {isSeed ? t("Seed") : "Telegram"}
       </span>
       {file.acquiredVia === "SEED" && !isSeed && (
-        <span className="text-violet-600">· via PT</span>
+        <span className="text-violet-600">{t("· via PT")}</span>
       )}
     </div>
   );
@@ -60,6 +65,7 @@ export function FileSharing({
   className?: string;
   showEmpty?: boolean;
 }) {
+  useLocale();
   if (!file.shareStatus || file.shareStatus === "UNSHARED") {
     return showEmpty ? (
       <span className="text-xs text-muted-foreground">—</span>
@@ -67,7 +73,7 @@ export function FileSharing({
   }
 
   const label = file.sharedByMe
-    ? "Shared"
+    ? t("Shared")
     : (SHARE_STATUS_LABELS[file.shareStatus] ?? file.shareStatus);
 
   return (
@@ -81,7 +87,7 @@ export function FileSharing({
       )}
     >
       <Share2 aria-hidden="true" className="h-3 w-3" />
-      {label}
+      {t(label)}
     </Badge>
   );
 }

@@ -52,9 +52,7 @@ describe("AdminAuthGate", () => {
     );
 
     expect(await screen.findByText("Administrator sign in")).toBeVisible();
-    expect(
-      screen.getByRole("img", { name: "Telegram Files logo" }),
-    ).toBeVisible();
+    expect(screen.getByRole("img", { name: "TGFlow logo" })).toBeVisible();
     expect(
       screen.queryByText(
         "Telegram Files management APIs and WebSocket access require an active administrator session.",
@@ -82,7 +80,7 @@ describe("AdminAuthGate", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the Telegram Files logo during administrator bootstrap", async () => {
+  it("shows the TGFlow logo during administrator bootstrap", async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -101,9 +99,7 @@ describe("AdminAuthGate", () => {
     expect(
       await screen.findByText("Create the first administrator"),
     ).toBeVisible();
-    expect(
-      screen.getByRole("img", { name: "Telegram Files logo" }),
-    ).toBeVisible();
+    expect(screen.getByRole("img", { name: "TGFlow logo" })).toBeVisible();
   });
 
   it("locks the UI immediately when a session is revoked", async () => {

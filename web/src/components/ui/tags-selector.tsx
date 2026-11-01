@@ -1,4 +1,6 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import * as React from "react";
 import { useEffect, useState } from "react";
@@ -18,6 +20,7 @@ export function TagsSelector({
   tags = [],
   className,
 }: TagsSelectorProps) {
+  useLocale();
   const [selectedTags, setSelectedTags] = useState<string[]>(value);
 
   useEffect(() => {
@@ -38,7 +41,7 @@ export function TagsSelector({
   if (tags.length === 0) {
     return (
       <div className="py-2 text-center text-xs text-muted-foreground">
-        暂无可选标签
+        {t("No available tags")}
       </div>
     );
   }
@@ -55,7 +58,7 @@ export function TagsSelector({
             className={cn(
               "flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition active:scale-95",
               isSelected
-                ? "bg-primary text-primary-foreground font-semibold shadow"
+                ? "bg-primary font-semibold text-primary-foreground shadow"
                 : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >

@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import {
   Dialog,
   DialogContent,
@@ -22,13 +26,14 @@ export default function ProxysDialog({
   telegramId,
   ...proxyProps
 }: ProxysDialogProps) {
+  useLocale();
   const { data, isLoading } = useSWR<{
     success: boolean;
   }>(telegramId ? `/telegram/${telegramId}/test-network` : undefined);
 
   const triggerTooltipContent = useMemo(() => {
     if (!telegramId) {
-      return "You can add proxys for telegram connection.";
+      return t("You can add proxys for telegram connection.");
     }
     return (
       <>
@@ -74,7 +79,7 @@ export default function ProxysDialog({
         aria-describedby={undefined}
       >
         <VisuallyHidden>
-          <DialogTitle>Proxys</DialogTitle>
+          <DialogTitle>{t("Proxys")}</DialogTitle>
         </VisuallyHidden>
         <div className="mt-3">
           <Proxys telegramId={telegramId} {...proxyProps} />

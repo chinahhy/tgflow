@@ -1,4 +1,6 @@
 "use client";
+import { t, getLocale } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import {
   Activity,
@@ -71,11 +73,12 @@ const terminalStates = new Set<BindingState>([
 ]);
 
 function defaultNodeName(): string {
-  if (typeof window === "undefined") return "Telegram Files node";
-  return `${window.location.hostname} · Telegram Files`;
+  if (typeof window === "undefined") return t("Telegram Files node");
+  return `${window.location.hostname} · TGFlow`;
 }
 
 export function PlatformBinding() {
+  useLocale();
   const [status, setStatus] = useState<BindingStatus>({ status: "UNBOUND" });
   const [nodeName, setNodeName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -155,7 +158,7 @@ export function PlatformBinding() {
       <Card>
         <CardContent className="flex min-h-80 items-center justify-center p-6">
           <LoaderCircle className="animate-spin text-muted-foreground" />
-          <span className="sr-only">Loading platform binding</span>
+          <span className="sr-only">{t("Loading platform binding")}</span>
         </CardContent>
       </Card>
     );
@@ -221,6 +224,7 @@ function AuthorizeCard({
   isMutating: boolean;
   onSubmit: (event: FormEvent) => void;
 }) {
+  useLocale();
   return (
     <Card>
       <CardHeader>
@@ -228,12 +232,13 @@ function AuthorizeCard({
           <div className="flex flex-col gap-2">
             <Badge variant="secondary" className="w-fit gap-1.5 px-2 py-1">
               <Cloud data-icon="inline-start" size={16} />
-              Unbound
+              {t("Unbound")}
             </Badge>
-            <CardTitle className="text-2xl">Connect this node</CardTitle>
+            <CardTitle className="text-2xl">{t("Connect this node")}</CardTitle>
             <CardDescription className="max-w-xl">
-              Authorize this installation from Telegram Seed. Credentials stay
-              encrypted on this machine and can be revoked independently.
+              {t(
+                "Authorize this installation from Telegram Seed. Credentials stay encrypted on this machine and can be revoked independently.",
+              )}
             </CardDescription>
           </div>
           <ShieldCheck className="text-muted-foreground" aria-hidden="true" />
@@ -245,7 +250,7 @@ function AuthorizeCard({
           onSubmit={onSubmit}
           className="flex flex-col gap-2"
         >
-          <Label htmlFor="node-name">Node name</Label>
+          <Label htmlFor="node-name">{t("Node name")}</Label>
           <Input
             id="node-name"
             value={nodeName}
@@ -255,13 +260,14 @@ function AuthorizeCard({
             onChange={(event) => setNodeName(event.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Use a name that makes this machine easy to recognize in your device
-            list.
+            {t(
+              "Use a name that makes this machine easy to recognize in your device list.",
+            )}
           </p>
           {terminalStates.has(status) && (
             <p className="mt-2 text-sm text-muted-foreground">
-              The previous authorization was {status}. Start a new request when
-              ready.
+              {t("The previous authorization was")} {t(status)}
+              {t(". Start a new request when ready.")}
             </p>
           )}
         </form>
@@ -277,7 +283,7 @@ function AuthorizeCard({
           ) : (
             <ArrowUpRight data-icon="inline-start" />
           )}
-          Start authorization
+          {t("Start authorization")}
         </Button>
       </CardFooter>
     </Card>
@@ -297,6 +303,7 @@ function PendingCard({
   onRefresh: () => void;
   onCancel: () => void;
 }) {
+  useLocale();
   const remaining = Math.max(0, (status.expiresAt ?? now) - now);
   const total = 10 * 60 * 1_000;
   const progress = Math.min(100, (remaining / total) * 100);
@@ -306,12 +313,15 @@ function PendingCard({
       <CardHeader>
         <Badge variant="secondary" className="w-fit gap-1.5 px-2 py-1">
           <Activity data-icon="inline-start" size={16} />
-          Waiting for approval
+          {t("Waiting for approval")}
         </Badge>
-        <CardTitle className="text-2xl">Approve in Telegram Seed</CardTitle>
+        <CardTitle className="text-2xl">
+          {t("Approve in Telegram Seed")}
+        </CardTitle>
         <CardDescription>
-          Scan the code or open the approval link, then confirm the node name
-          and scopes.
+          {t(
+            "Scan the code or open the approval link, then confirm the node name and scopes.",
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6 md:grid-cols-[12rem_1fr] md:items-center">
@@ -319,7 +329,7 @@ function PendingCard({
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              User code
+              {t("User code")}
             </span>
             <div className="flex flex-wrap items-center gap-2">
               <code className="rounded-md border bg-muted px-3 py-2 text-xl font-semibold tracking-widest">
@@ -329,7 +339,7 @@ function PendingCard({
                 type="button"
                 size="icon"
                 variant="outline"
-                aria-label="Copy user code"
+                aria-label={t("Copy user code")}
                 onClick={() =>
                   void navigator.clipboard.writeText(status.userCode ?? "")
                 }
@@ -340,7 +350,7 @@ function PendingCard({
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex justify-between gap-4 text-xs text-muted-foreground">
-              <span>Authorization window</span>
+              <span>{t("Authorization window")}</span>
               <span>{formatRemaining(remaining)}</span>
             </div>
             <Progress value={progress} />
@@ -353,7 +363,7 @@ function PendingCard({
                 rel="noreferrer"
               >
                 <ArrowUpRight data-icon="inline-start" />
-                Open approval page
+                {t("Open approval page")}
               </a>
             </Button>
           )}
@@ -362,7 +372,7 @@ function PendingCard({
       <CardFooter className="justify-between gap-3 border-t pt-6">
         <Button type="button" variant="ghost" onClick={onRefresh}>
           <RefreshCw data-icon="inline-start" />
-          Check now
+          {t("Check now")}
         </Button>
         <Button
           type="button"
@@ -370,7 +380,7 @@ function PendingCard({
           disabled={isMutating}
           onClick={onCancel}
         >
-          Cancel
+          {t("Cancel")}
         </Button>
       </CardFooter>
     </Card>
@@ -392,6 +402,7 @@ function BoundCard({
   onRename: (event: FormEvent) => void;
   onUnbind: () => void;
 }) {
+  useLocale();
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   if (isCollapsed) {
@@ -403,16 +414,16 @@ function BoundCard({
         <CardHeader className="py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              <Badge className="w-fit py-1 px-2 gap-1.5">
+              <Badge className="w-fit gap-1.5 px-2 py-1">
                 <CheckCircle2 data-icon="inline-start" size={16} />
-                Bound
+                {t("Bound")}
               </Badge>
               <span className="font-semibold">{status.nodeName}</span>
-              <span className="font-mono text-xs text-muted-foreground hidden sm:inline">
+              <span className="hidden font-mono text-xs text-muted-foreground sm:inline">
                 {shortId(status.nodeId)}
               </span>
-              <span className="text-xs text-muted-foreground hidden md:inline">
-                • Last heartbeat {formatRelative(status.lastHeartbeatAt)}
+              <span className="hidden text-xs text-muted-foreground md:inline">
+                {t("• Last heartbeat")} {formatRelative(status.lastHeartbeatAt)}
               </span>
             </div>
             <Button
@@ -438,17 +449,19 @@ function BoundCard({
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-2">
-            <Badge className="w-fit py-1 px-2 gap-1.5">
+            <Badge className="w-fit gap-1.5 px-2 py-1">
               <CheckCircle2 data-icon="inline-start" size={16} />
-              Bound
+              {t("Bound")}
             </Badge>
             <CardTitle className="text-2xl">{status.nodeName}</CardTitle>
             <CardDescription>
-              This node has its own credential family and heartbeat identity.
+              {t(
+                "This node has its own credential family and heartbeat identity.",
+              )}
             </CardDescription>
           </div>
           <div className="flex items-start gap-4">
-            <span className="font-mono text-xs text-muted-foreground mt-2">
+            <span className="mt-2 font-mono text-xs text-muted-foreground">
               {shortId(status.nodeId)}
             </span>
             <Button
@@ -465,13 +478,13 @@ function BoundCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Fact label="Platform" value={hostOf(status.platformUrl)} />
+          <Fact label={t("Platform")} value={hostOf(status.platformUrl)} />
           <Fact
-            label="Last heartbeat"
+            label={t("Last heartbeat")}
             value={formatRelative(status.lastHeartbeatAt)}
           />
           <Fact
-            label="Access rotates"
+            label={t("Access rotates")}
             value={formatRelative(status.tokenExpireAt)}
           />
         </div>
@@ -481,7 +494,7 @@ function BoundCard({
           onSubmit={onRename}
           className="flex flex-col gap-2"
         >
-          <Label htmlFor="bound-node-name">Node name</Label>
+          <Label htmlFor="bound-node-name">{t("Node name")}</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               id="bound-node-name"
@@ -499,7 +512,7 @@ function BoundCard({
                 nodeName.trim() === status.nodeName
               }
             >
-              Save name
+              {t("Save name")}
             </Button>
           </div>
         </form>
@@ -516,7 +529,7 @@ function BoundCard({
           ) : (
             <Unlink data-icon="inline-start" />
           )}
-          Unbind this node
+          {t("Unbind this node")}
         </Button>
       </CardFooter>
     </Card>
@@ -524,6 +537,7 @@ function BoundCard({
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
+  useLocale();
   return (
     <div className="flex flex-col gap-1 rounded-lg border bg-muted/30 p-4">
       <span className="text-xs text-muted-foreground">{label}</span>
@@ -533,6 +547,7 @@ function Fact({ label, value }: { label: string; value: string }) {
 }
 
 function BindingQrCode({ value }: { value?: string }) {
+  useLocale();
   const host = useRef<HTMLDivElement>(null);
   const qrCode = useMemo(
     () =>
@@ -573,11 +588,11 @@ function BindingQrCode({ value }: { value?: string }) {
 function messageOf(failure: unknown): string {
   return failure instanceof Error
     ? failure.message
-    : "The platform request failed";
+    : t("The platform request failed");
 }
 
 function shortId(value?: string): string {
-  if (!value) return "Node ID pending";
+  if (!value) return t("Node ID pending");
   return value.length > 16 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
 }
 
@@ -591,10 +606,12 @@ function hostOf(value?: string): string {
 }
 
 function formatRelative(value?: number | null): string {
-  if (!value) return "Not reported yet";
+  if (!value) return t("Not reported yet");
   const distance = value - Date.now();
   const absolute = Math.abs(distance);
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  const formatter = new Intl.RelativeTimeFormat(getLocale(), {
+    numeric: "auto",
+  });
   if (absolute < 60_000)
     return formatter.format(Math.round(distance / 1_000), "second");
   if (absolute < 3_600_000)

@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import React, { useState } from "react";
 import {
   Dialog,
@@ -20,6 +24,7 @@ import FilePhaseStatistics from "@/components/file-phase-statistics";
 import DebugTelegramMethod from "@/components/debug-telegram-method";
 
 export const SettingsDialog: React.FC = () => {
+  useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const { account, accountId } = useTelegramAccount();
 
@@ -31,7 +36,7 @@ export const SettingsDialog: React.FC = () => {
           setIsOpen(!isOpen);
         }}
       >
-        <Button variant="ghost" size="icon" aria-label="Open settings">
+        <Button variant="ghost" size="icon" aria-label={t("Open settings")}>
           <Settings className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -41,18 +46,18 @@ export const SettingsDialog: React.FC = () => {
         aria-describedby={undefined}
       >
         <VisuallyHidden>
-          <DialogTitle>Settings</DialogTitle>
+          <DialogTitle>{t("Settings")}</DialogTitle>
         </VisuallyHidden>
         <Tabs
           defaultValue="general"
           className="mt-3 flex h-full flex-col overflow-hidden"
         >
           <TabsList className="min-h-9 justify-start overflow-auto">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="statistics">Statistics</TabsTrigger>
-            <TabsTrigger value="proxys">Proxys</TabsTrigger>
+            <TabsTrigger value="general">{t("General")}</TabsTrigger>
+            <TabsTrigger value="statistics">{t("Statistics")}</TabsTrigger>
+            <TabsTrigger value="proxys">{t("Proxys")}</TabsTrigger>
             <TabsTrigger value="api">API</TabsTrigger>
-            <TabsTrigger value="about">About</TabsTrigger>
+            <TabsTrigger value="about">{t("About")}</TabsTrigger>
           </TabsList>
           <TabsContent value="general" className="overflow-hidden">
             <SettingsForm />
@@ -85,7 +90,7 @@ export const SettingsDialog: React.FC = () => {
               ) : (
                 <div className="flex flex-1 items-center justify-center">
                   <p className="text-lg text-muted-foreground">
-                    Please select an account to view statistics
+                    {t("Please select an account to view statistics")}
                   </p>
                 </div>
               )}

@@ -9,6 +9,12 @@ const apiHeaders = {
   "content-type": "application/json",
 };
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("tgflow.locale.v1", "en"),
+  );
+});
+
 async function json(route: Route, status: number, body: unknown) {
   await route.fulfill({
     status,

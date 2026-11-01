@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { type TelegramFile } from "@/lib/types";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -31,10 +35,11 @@ const checkVideoSupport = (mimeType: string): "probably" | "maybe" | "" => {
 
 // Browser compatibility limited formats
 const BROWSER_LIMITED_FORMATS: Record<string, string> = {
-  "video/quicktime": "QuickTime format is recommended for Safari browser",
-  "video/mp2t":
+  "video/quicktime": t("QuickTime format is recommended for Safari browser"),
+  "video/mp2t": t(
     "MPEG-TS format is not supported by browsers, please download and use VLC player",
-  "video/x-matroska": "MKV format has limited support in some browsers",
+  ),
+  "video/x-matroska": t("MKV format has limited support in some browsers"),
 };
 
 // 获取 MIME 类型
@@ -85,21 +90,24 @@ const LOAD_SPEED_IDLE_TIMEOUT_MS = 1500;
 
 const VideoErrorFallback = ({
   className = "",
-  message = "Video loading failed!",
-}) => (
-  <div
-    className={cn(
-      "flex flex-col items-center justify-center rounded-lg border border-white/10 bg-zinc-950/90 p-6 text-center shadow-2xl ring-1 ring-white/10",
-      className,
-    )}
-  >
-    <div className="mb-3 rounded-full bg-white/10 p-3">
-      <VideoOff className="h-7 w-7 text-white/70" />
+  message = t("Video loading failed!"),
+}) => {
+  useLocale();
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center rounded-lg border border-white/10 bg-zinc-950/90 p-6 text-center shadow-2xl ring-1 ring-white/10",
+        className,
+      )}
+    >
+      <div className="mb-3 rounded-full bg-white/10 p-3">
+        <VideoOff className="h-7 w-7 text-white/70" />
+      </div>
+      <p className="text-sm font-medium text-white">{t("Video unavailable")}</p>
+      <p className="mt-1 max-w-sm text-sm text-white/60">{message}</p>
     </div>
-    <p className="text-sm font-medium text-white">Video unavailable</p>
-    <p className="mt-1 max-w-sm text-sm text-white/60">{message}</p>
-  </div>
-);
+  );
+};
 
 const Slider = React.forwardRef<
   React.ComponentRef<typeof SliderPrimitive.Root>,
@@ -180,6 +188,7 @@ const DesktopControls = ({
   previewPos: number;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
 }) => {
+  useLocale();
   const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2];
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -326,6 +335,7 @@ const MobileControls = ({
   onSkipForward: () => void;
   onSkipBackward: () => void;
 }) => {
+  useLocale();
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -410,6 +420,7 @@ const FileVideo = ({
   onFileChange?: (file: TelegramFile) => void;
   className?: string;
 }) => {
+  useLocale();
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -576,7 +587,9 @@ const FileVideo = ({
     if (support === "" && BROWSER_LIMITED_FORMATS[mimeType]) {
       setFormatWarning(BROWSER_LIMITED_FORMATS[mimeType]);
       console.warn(
-        `Video format ${mimeType} may not be supported in current browser`,
+        t("Video format {type} may not be supported in current browser", {
+          type: mimeType,
+        }),
       );
     }
   }, [mimeType]);
@@ -750,7 +763,7 @@ const FileVideo = ({
       mimeType: mimeType,
     });
     // Set a user-friendly error message based on the error code
-    let message = "Video loading failed";
+    let message = t("Video loading failed");
     if (videoElement.error) {
       switch (videoElement.error.code) {
         case 1:
@@ -763,7 +776,7 @@ const FileVideo = ({
           message = "Decode error";
           break;
         case 4:
-          message = `Unsupported format (${mimeType})`;
+          message = t("Unsupported format ({type})", { type: mimeType });
           if (BROWSER_LIMITED_FORMATS[mimeType]) {
             message += ` - ${BROWSER_LIMITED_FORMATS[mimeType]}`;
           }
@@ -858,7 +871,7 @@ const FileVideo = ({
         onTimeUpdate={handleTimeUpdate}
       >
         <source src={url} type={mimeType} />
-        Your browser does not support this video format
+        {t("Your browser does not support this video format")}
       </video>
 
       {/* Hidden video for preview */}
@@ -902,7 +915,7 @@ const FileVideo = ({
                   formatWarning ? "top-16 sm:top-16" : "top-3 sm:top-5",
                 )}
               >
-                <span className="text-white/60">Loading</span>{" "}
+                <span className="text-white/60">{t("Loading")}</span>{" "}
                 {formatLoadingSpeed(loadingSpeed)}
                 <span className="ml-2 text-white/50">
                   {Math.floor(loadedPercent)}%

@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWRMutation from "swr/mutation";
 import type { TelegramApiResult } from "@/lib/types";
@@ -5,6 +9,7 @@ import { telegramApi, type TelegramApiArg } from "@/lib/api";
 import { useWebsocket } from "@/hooks/use-websocket";
 
 export function useTelegramMethod() {
+  useLocale();
   const pendingRequestsRef = useRef<
     Map<
       string,
@@ -86,7 +91,7 @@ export function useTelegramMethod() {
           const timeoutId = setTimeout(() => {
             pendingRequestsRef.current.delete(code);
             setPendingCount(pendingRequestsRef.current.size); // 更新 state
-            reject(new Error(`Request timeout for code: ${code}`));
+            reject(new Error(t("Request timeout for code: {code}", { code })));
           }, 30000);
 
           pendingRequestsRef.current.set(code, {

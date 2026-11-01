@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { useTelegramMethod } from "@/hooks/use-telegram-method";
 import useSWR from "swr";
 import { request } from "@/lib/api";
@@ -42,6 +46,7 @@ interface TelegramMethodParameters {
 }
 
 export default function DebugTelegramMethod() {
+  useLocale();
   const { triggerMethod, isMethodExecuting, lastMethodCode, lastMethodResult } =
     useTelegramMethod();
   const [isDeMethodExecuting] = useDebounce(isMethodExecuting, 500, {
@@ -107,7 +112,10 @@ export default function DebugTelegramMethod() {
       setParameters(JSON.parse(value));
       setError("");
     } catch (error) {
-      setError("Invalid JSON format" + (error instanceof Error ? `: ${error.message}` : ""));
+      setError(
+        "Invalid JSON format" +
+          (error instanceof Error ? `: ${error.message}` : ""),
+      );
     }
   };
 
@@ -119,7 +127,7 @@ export default function DebugTelegramMethod() {
       });
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "An error occurred");
+      setError(e instanceof Error ? e.message : t("An error occurred"));
     }
   };
 
@@ -129,17 +137,17 @@ export default function DebugTelegramMethod() {
   return (
     <Card className="no-scrollbar mx-auto h-full w-full overflow-y-scroll">
       <CardHeader>
-        <CardTitle>Telegram API Debug</CardTitle>
+        <CardTitle>{t("Telegram API Debug")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Method Selection */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Method</label>
+            <label className="text-sm font-medium">{t("Method")}</label>
             {isMethodsLoading && (
               <div className="flex items-center text-sm text-muted-foreground">
                 <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                Loading methods...
+                {t("Loading methods...")}
               </div>
             )}
           </div>
@@ -152,14 +160,14 @@ export default function DebugTelegramMethod() {
                 className="w-full justify-between"
                 disabled={isLoading}
               >
-                {method ? method : "Select a method..."}
+                {method ? method : t("Select a method...")}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-full p-0" modal={true} align="start">
               <Command shouldFilter={false}>
                 <CommandInput
-                  placeholder="Search method..."
+                  placeholder={t("Search method...")}
                   value={searchQuery}
                   onValueChange={setSearchQuery}
                 />
@@ -172,14 +180,14 @@ export default function DebugTelegramMethod() {
                     </CommandLoading>
                   )}
                   {!isMethodsLoading && filteredMethods.length === 0 && (
-                    <CommandEmpty>No methods found.</CommandEmpty>
+                    <CommandEmpty>{t("No methods found.")}</CommandEmpty>
                   )}
                   {!isMethodExecuting && searchQuery.length === 0 && (
                     <>
                       <CommandGroup>
                         <CommandItem disabled={true}>
                           <CircleAlert className="h-3 w-3" />
-                          Only the first 100 methods are shown.
+                          {t("Only the first 100 methods are shown.")}
                         </CommandItem>
                       </CommandGroup>
                       <CommandSeparator />
@@ -212,7 +220,7 @@ export default function DebugTelegramMethod() {
               target="_blank"
               className="text-xs text-blue-500 underline"
             >
-              {method} Documentation
+              {method} {t("Documentation")}
             </Link>
           )}
         </div>
@@ -220,18 +228,18 @@ export default function DebugTelegramMethod() {
         {/* Parameters Editor */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Parameters</label>
+            <label className="text-sm font-medium">{t("Parameters")}</label>
             {isParametersLoading && (
               <div className="flex items-center text-sm text-muted-foreground">
                 <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                Loading parameters...
+                {t("Loading parameters...")}
               </div>
             )}
           </div>
           <Textarea
             value={parametersJson}
             onChange={(e) => handleParametersChange(e.target.value)}
-            placeholder="Enter parameters in JSON format"
+            placeholder={t("Enter parameters in JSON format")}
             className="h-48 font-mono text-sm"
             disabled={!method || isLoading}
           />
@@ -247,10 +255,10 @@ export default function DebugTelegramMethod() {
           {isDeMethodExecuting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Executing...
+              {t("Executing...")}
             </>
           ) : (
-            "Execute Method"
+            t("Execute Method")
           )}
         </Button>
 
@@ -258,7 +266,7 @@ export default function DebugTelegramMethod() {
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium">
-              Result
+              {t("Result")}
               <span className="text-xs text-muted-foreground">
                 {lastMethodCode ? `(${lastMethodCode})` : ""}
               </span>
@@ -266,7 +274,7 @@ export default function DebugTelegramMethod() {
             {isMethodExecuting && (
               <div className="flex items-center text-sm text-muted-foreground">
                 <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                Processing...
+                {t("Processing...")}
               </div>
             )}
           </div>
@@ -278,7 +286,7 @@ export default function DebugTelegramMethod() {
                   : ""
               }
               readOnly
-              placeholder="Method execution result will appear here"
+              placeholder={t("Method execution result will appear here")}
               className="h-48 font-mono text-sm"
             />
             <Button

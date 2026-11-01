@@ -1,3 +1,7 @@
+"use client";
+import { t, getLocale } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import React, { useState } from "react";
 import useSWR from "swr";
 import {
@@ -53,18 +57,18 @@ const formatDate = (dateStr: string, timeRange: TimeRange): string => {
 
   switch (timeRange) {
     case "1": // Last hour
-      return date.toLocaleTimeString("en-US", {
+      return date.toLocaleTimeString(getLocale(), {
         hour: "2-digit",
         minute: "2-digit",
       });
     case "2": // Last day
-      return date.toLocaleTimeString("en-US", {
+      return date.toLocaleTimeString(getLocale(), {
         hour: "2-digit",
         minute: "2-digit",
       });
     case "3": // Last week
     case "4": // Last month
-      return date.toLocaleDateString("en-US", {
+      return date.toLocaleDateString(getLocale(), {
         month: "short",
         day: "numeric",
       });
@@ -88,6 +92,7 @@ const axisStyle = {
 };
 
 const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
+  useLocale();
   const [timeRange, setTimeRange] = useState<TimeRange>("1");
   const { settings } = useSettings();
 
@@ -96,11 +101,15 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
   );
 
   if (error) {
-    return <div className="p-4 text-red-500">Failed to load statistics</div>;
+    return (
+      <div className="p-4 text-red-500">{t("Failed to load statistics")}</div>
+    );
   }
 
   if (isLoading || !data) {
-    return <div className="p-4 text-gray-500">Loading statistics...</div>;
+    return (
+      <div className="p-4 text-gray-500">{t("Loading statistics...")}</div>
+    );
   }
 
   // Transform speed data for the chart
@@ -126,12 +135,12 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
           onValueChange={(value: TimeRange) => setTimeRange(value)}
         >
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Select time range" />
+            <SelectValue placeholder={t("Select time range")} />
           </SelectTrigger>
           <SelectContent>
             {timeRangeOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                {t(option.label)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -140,13 +149,15 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="px-1">Download Speed Over Time</CardTitle>
+          <CardTitle className="px-1">
+            {t("Download Speed Over Time")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="px-1">
           <div className="h-80">
             {!speedChartData || speedChartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-gray-500">
-                No data available
+                {t("No data available")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -189,6 +200,7 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
                   <Area
                     type="monotone"
                     dataKey="Max Speed"
+                    name={t("Max Speed")}
                     stroke="#06b6d4"
                     fill="#06b6d4"
                     fillOpacity={0.6}
@@ -196,6 +208,7 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
                   <Area
                     type="monotone"
                     dataKey="Average Speed"
+                    name={t("Average Speed")}
                     stroke="#8b5cf6"
                     fill="#8b5cf6"
                     fillOpacity={0.8}
@@ -203,6 +216,7 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
                   <Area
                     type="monotone"
                     dataKey="Median Speed"
+                    name={t("Median Speed")}
                     stroke="#f59e0b"
                     fill="#f59e0b"
                     fillOpacity={0.2}
@@ -210,6 +224,7 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
                   <Area
                     type="monotone"
                     dataKey="Min Speed"
+                    name={t("Min Speed")}
                     stroke="#ec4899"
                     fill="#ec4899"
                     fillOpacity={0.7}
@@ -223,13 +238,15 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="px-1">Completed Downloads Over Time</CardTitle>
+          <CardTitle className="px-1">
+            {t("Completed Downloads Over Time")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="px-1">
           <div className="h-80">
             {!completionChartData || completionChartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-gray-500">
-                No data available
+                {t("No data available")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -261,6 +278,7 @@ const TelegramStats: React.FC<TelegramStatsProps> = ({ telegramId }) => {
                   <Legend wrapperStyle={axisStyle} iconType="rect" />
                   <Bar
                     dataKey="Completed Downloads"
+                    name={t("Completed Downloads")}
                     fill="#299d90"
                     fillOpacity={0.8}
                     maxBarSize={100}

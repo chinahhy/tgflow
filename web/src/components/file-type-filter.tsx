@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import {
   Select,
   SelectContent,
@@ -33,12 +37,11 @@ const FileTypeSelectItem = ({
   counts,
   isLoading,
 }: FileTypeSelectItemProps) => {
+  useLocale();
   return (
     <SelectItem value={value}>
       <div className="flex items-center gap-5">
-        <span className="w-10">
-          {value.charAt(0).toUpperCase() + value.slice(1)}
-        </span>
+        <span className="min-w-10">{t(value)}</span>
         {isLoading ? (
           <Ellipsis className="h-4 w-4 animate-pulse" />
         ) : (
@@ -59,6 +62,7 @@ export default function FileTypeFilter({
   seedOnly = false,
   onChange,
 }: FileTypeFilterProps) {
+  useLocale();
   const [localType, setLocalType] = React.useState<FileType | "all">(type);
   const countParams = new URLSearchParams({
     offline: String(offline),
@@ -82,13 +86,13 @@ export default function FileTypeFilter({
 
   return (
     <div className="space-y-2">
-      <Label>Type</Label>
+      <Label>{t("Type")}</Label>
       <Select value={localType} onValueChange={handleTypeChange}>
         <SelectTrigger>
-          <SelectValue placeholder="File type" />
+          <SelectValue placeholder={t("File type")} />
         </SelectTrigger>
         <SelectContent>
-          {offline && <SelectItem value="all">All Files</SelectItem>}
+          {offline && <SelectItem value="all">{t("All Files")}</SelectItem>}
           <FileTypeSelectItem
             value="media"
             counts={counts}

@@ -1,4 +1,7 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { Header } from "@/components/header";
 import { EmptyState } from "@/components/empty-state";
 import { useSearchParams } from "next/navigation";
@@ -9,6 +12,7 @@ import React from "react";
 import ParseLinkButton from "@/components/parse-link";
 
 export default function AccountPage() {
+  useLocale();
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const accountId = searchParams.get("id");
@@ -32,7 +36,7 @@ export default function AccountPage() {
         <div className="flex min-h-[60vh] flex-col items-center justify-center">
           <EmptyState
             hasAccounts={true}
-            message="Select a chat to view files"
+            message={t("Select a chat to view files")}
           />
           {accountId && <ParseLinkButton accountId={accountId} />}
         </div>

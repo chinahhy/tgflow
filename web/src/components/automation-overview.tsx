@@ -1,4 +1,6 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -57,24 +59,25 @@ function fallback(value?: string) {
 }
 
 function AutomationBadges({ item }: { item: AutomationChatOverview }) {
+  useLocale();
   return (
     <div className="flex flex-wrap gap-2">
       {item.auto.preload.enabled && (
         <Badge variant="secondary">
           <PackageSearch data-icon="inline-start" />
-          Preload
+          {t("Preload")}
         </Badge>
       )}
       {item.auto.download.enabled && (
         <Badge variant="secondary">
           <Download data-icon="inline-start" />
-          Download
+          {t("Download")}
         </Badge>
       )}
       {item.auto.transfer.enabled && (
         <Badge variant="secondary">
           <FolderSync data-icon="inline-start" />
-          Transfer
+          {t("Transfer")}
         </Badge>
       )}
     </div>
@@ -82,6 +85,7 @@ function AutomationBadges({ item }: { item: AutomationChatOverview }) {
 }
 
 function ProgressText({ item }: { item: AutomationChatOverview }) {
+  useLocale();
   const enabled = [
     item.auto.preload.enabled &&
       isStateComplete(item.auto.state, HISTORY_PRELOAD_STATE),
@@ -93,17 +97,20 @@ function ProgressText({ item }: { item: AutomationChatOverview }) {
   const total = enabledCount(item);
 
   if (total === 0) {
-    return <span className="text-muted-foreground">No active automation</span>;
+    return (
+      <span className="text-muted-foreground">{t("No active automation")}</span>
+    );
   }
 
   return (
     <span className="text-muted-foreground">
-      {enabled} / {total} historical jobs complete
+      {enabled} / {total} {t("historical jobs complete")}
     </span>
   );
 }
 
 function RuleSummary({ item }: { item: AutomationChatOverview }) {
+  useLocale();
   if (item.auto.transfer.enabled && item.auto.transfer.rule.destination) {
     return (
       <span className="truncate text-muted-foreground">
@@ -115,7 +122,9 @@ function RuleSummary({ item }: { item: AutomationChatOverview }) {
   if (item.auto.download.enabled) {
     const query = item.auto.download.rule.query;
     const filterExpr = item.auto.download.rule.filterExpr;
-    const fileTypes = item.auto.download.rule.fileTypes.join(", ");
+    const fileTypes = item.auto.download.rule.fileTypes
+      .map((type) => t(type))
+      .join(", ");
     return (
       <span className="truncate text-muted-foreground">
         {query || filterExpr || fileTypes || "Download rule enabled"}
@@ -123,19 +132,20 @@ function RuleSummary({ item }: { item: AutomationChatOverview }) {
     );
   }
 
-  return <span className="text-muted-foreground">Preload enabled</span>;
+  return <span className="text-muted-foreground">{t("Preload enabled")}</span>;
 }
 
 function LoadingState() {
+  useLocale();
   return (
     <Card className="mx-auto mb-8">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Workflow data-icon="inline-start" />
-          Automation Overview
+          {t("Automation Overview")}
         </CardTitle>
         <CardDescription>
-          Loading automated chats across accounts.
+          {t("Loading automated chats across accounts.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -148,6 +158,7 @@ function LoadingState() {
 }
 
 export function AutomationOverview() {
+  useLocale();
   const router = useRouter();
   const {
     data: items,
@@ -164,7 +175,7 @@ export function AutomationOverview() {
       <Card className="mx-auto mb-8">
         <CardContent className="flex items-center justify-center gap-2 p-6 text-muted-foreground">
           <AlertTriangle data-icon="inline-start" />
-          Failed to load automation overview
+          {t("Failed to load automation overview")}
         </CardContent>
       </Card>
     );
@@ -176,9 +187,11 @@ export function AutomationOverview() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Workflow data-icon="inline-start" />
-            Automation Overview
+            {t("Automation Overview")}
           </CardTitle>
-          <CardDescription>No chats have automation enabled.</CardDescription>
+          <CardDescription>
+            {t("No chats have automation enabled.")}
+          </CardDescription>
         </CardHeader>
       </Card>
     );
@@ -190,24 +203,26 @@ export function AutomationOverview() {
         <div className="flex flex-col gap-1">
           <CardTitle className="flex items-center gap-2">
             <Workflow data-icon="inline-start" />
-            Automation Overview
+            {t("Automation Overview")}
           </CardTitle>
           <CardDescription>
-            {items.length} automated chats across all active accounts.
+            {items.length} {t("automated chats across all active accounts.")}
           </CardDescription>
         </div>
-        <Badge variant="outline">{items.length} chats</Badge>
+        <Badge variant="outline">
+          {items.length} {t("chats")}
+        </Badge>
       </CardHeader>
       <CardContent>
         <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Chat</TableHead>
-                <TableHead>Account</TableHead>
-                <TableHead>Automation</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Rule</TableHead>
+                <TableHead>{t("Chat")}</TableHead>
+                <TableHead>{t("Account")}</TableHead>
+                <TableHead>{t("Automation")}</TableHead>
+                <TableHead>{t("Progress")}</TableHead>
+                <TableHead>{t("Rule")}</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
@@ -254,7 +269,7 @@ export function AutomationOverview() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label={`Open ${item.chatName}`}
+                      aria-label={t("Open {name}", { name: item.chatName })}
                       onClick={(event) => {
                         event.stopPropagation();
                         router.push(chatHref(item));

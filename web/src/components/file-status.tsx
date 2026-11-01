@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { type TelegramFile } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import React from "react";
@@ -72,6 +76,7 @@ export default function FileStatus({
   file: TelegramFile;
   className?: string;
 }) {
+  useLocale();
   const badgeVariants = {
     initial: { opacity: 0, scale: 0.9 },
     animate: {
@@ -96,7 +101,7 @@ export default function FileStatus({
             animate="animate"
             exit="exit"
           >
-            <TooltipWrapper content="Download Status">
+            <TooltipWrapper content={t("Download Status")}>
               <Badge
                 className={cn(
                   "h-6 text-xs hover:bg-gray-200",
@@ -104,7 +109,7 @@ export default function FileStatus({
                   isMobile && "shadow-none",
                 )}
               >
-                {DOWNLOAD_STATUS[file.downloadStatus].text}
+                {t(DOWNLOAD_STATUS[file.downloadStatus].text)}
               </Badge>
             </TooltipWrapper>
           </motion.div>
@@ -119,14 +124,14 @@ export default function FileStatus({
               animate="animate"
               exit="exit"
             >
-              <TooltipWrapper content="Transfer Status">
+              <TooltipWrapper content={t("Transfer Status")}>
                 <Badge
                   className={cn(
                     "h-6 text-xs hover:bg-gray-200",
                     TRANSFER_STATUS[file.transferStatus].className,
                   )}
                 >
-                  {TRANSFER_STATUS[file.transferStatus].text}
+                  {t(TRANSFER_STATUS[file.transferStatus].text)}
                 </Badge>
               </TooltipWrapper>
             </motion.div>

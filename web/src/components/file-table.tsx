@@ -1,4 +1,7 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import React, {
   useCallback,
   useEffect,
@@ -70,7 +73,8 @@ const COLUMNS: Column[] = [
     label: "Seeding",
     isVisible: true,
     className: "w-40 text-center",
-    tooltip: "qBittorrent seeding status, traffic speeds, share ratio and uploaded total",
+    tooltip:
+      "qBittorrent seeding status, traffic speeds, share ratio and uploaded total",
   },
   {
     id: "status",
@@ -111,6 +115,7 @@ export function FileTable({
   messageThreadId,
   link,
 }: FileTableProps) {
+  useLocale();
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
   const tableParentRef = useRef<HTMLDivElement>(null);
   const shareEnabled = useShareEnabled();
@@ -212,7 +217,8 @@ export function FileTable({
       return;
     }
     const index = files.findIndex(
-      (f) => f.id === currentViewFile.id || f.uniqueId === currentViewFile.uniqueId,
+      (f) =>
+        f.id === currentViewFile.id || f.uniqueId === currentViewFile.uniqueId,
     );
     if (index === -1) {
       setCurrentViewFile(undefined);
@@ -274,7 +280,7 @@ export function FileTable({
               }}
             >
               <SquareChevronLeft className="h-4 w-4" />
-              Back
+              {t("Back")}
             </Button>
           )}
           {link ? (
@@ -285,7 +291,7 @@ export function FileTable({
           ) : (
             <>
               <Badge variant="outline" className="flex h-full bg-accent">
-                {filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}
+                {t(filters.type)}
               </Badge>
               <FileFilters
                 telegramId={accountId}
@@ -299,7 +305,7 @@ export function FileTable({
         </div>
         <div className="hidden items-center gap-4 md:flex">
           <span className="text-sm text-muted-foreground">
-            Loaded {loadedCount}
+            {t("Loaded")} {loadedCount}
             {totalCount === undefined ? "" : ` / ${totalCount}`}
           </span>
           <TableColumnFilter
@@ -359,13 +365,13 @@ export function FileTable({
                   )}
                 >
                   {col.tooltip ? (
-                    <TooltipWrapper content={col.tooltip}>
+                    <TooltipWrapper content={t(col.tooltip)}>
                       <span className="cursor-help border-b border-dotted border-muted-foreground/60">
-                        {col.label}
+                        {t(col.label)}
                       </span>
                     </TooltipWrapper>
                   ) : (
-                    col.label
+                    t(col.label)
                   )}
                 </div>
               ) : null,
@@ -380,7 +386,7 @@ export function FileTable({
                 opacityBase={0.1}
                 opacityMid={0.4}
                 opacityPeak={0.95}
-                ariaLabel="Loading files"
+                ariaLabel={t("Loading files")}
               />
             </div>
           )}

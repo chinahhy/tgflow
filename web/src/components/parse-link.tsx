@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { Button } from "@/components/ui/button";
 import { WandSparkles } from "lucide-react";
 import { TooltipWrapper } from "@/components/ui/tooltip";
@@ -28,6 +32,7 @@ interface ParseLinkButtonProps {
 }
 
 export default function ParseLinkButton({ accountId }: ParseLinkButtonProps) {
+  useLocale();
   const isMobile = useIsMobile();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -39,17 +44,18 @@ export default function ParseLinkButton({ accountId }: ParseLinkButtonProps) {
       const match = telegramLinkRegex.exec(text);
       if (!match) {
         toast({
-          title: "Invalid link",
-          description:
+          title: t("Invalid link"),
+          description: t(
             "Please copy a valid Telegram link. Example: https://t.me/username",
+          ),
           variant: "error",
         });
         return;
       }
       setOpen(false); // Close the drawer if it was open
       toast({
-        title: "Parsing link...",
-        description: `Parsing link: ${text}`,
+        title: t("Parsing link..."),
+        description: t("Parsing link: {link}", { link: text }),
         variant: "success",
       });
       // Redirect to the account page with the parsed link
@@ -58,8 +64,8 @@ export default function ParseLinkButton({ accountId }: ParseLinkButtonProps) {
       );
     } else {
       toast({
-        title: "No link found in clipboard",
-        description: "Please copy a Telegram link to parse.",
+        title: t("No link found in clipboard"),
+        description: t("Please copy a Telegram link to parse."),
         variant: "info",
       });
     }
@@ -96,10 +102,14 @@ export default function ParseLinkButton({ accountId }: ParseLinkButtonProps) {
           toggleParseLink={parseLink}
         />
       )}
-      <TooltipWrapper content="You can parse links from Telegram chats to get files directly.">
+      <TooltipWrapper
+        content={t(
+          "You can parse links from Telegram chats to get files directly.",
+        )}
+      >
         <Button className="mt-4" onClick={handleParseLink}>
           <WandSparkles className="mr-2 h-4 w-4" />
-          Parse Link
+          {t("Parse Link")}
         </Button>
       </TooltipWrapper>
     </>
@@ -115,21 +125,22 @@ function ParseLinkDialog({
   onOpenChange: (open: boolean) => void;
   toggleParseLink: (link: string) => void;
 }) {
+  useLocale();
   const [link, setLink] = useState<string>("");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full md:w-2/3">
         <DialogHeader>
-          <DialogTitle>Parse Link</DialogTitle>
+          <DialogTitle>{t("Parse Link")}</DialogTitle>
           <DialogDescription>
-            Enter a Telegram link to parse files from it. Example:{" "}
+            {t("Enter a Telegram link to parse files from it. Example:")}{" "}
             <code>https://t.me/username</code>
           </DialogDescription>
         </DialogHeader>
 
         <Input
-          placeholder="Enter Telegram link"
+          placeholder={t("Enter Telegram link")}
           value={link}
           onChange={(e) => setLink(e.target.value)}
           className="mb-4"
@@ -143,10 +154,10 @@ function ParseLinkDialog({
               toggleParseLink(link);
             }}
           >
-            Submit
+            {t("Submit")}
           </Button>
           <DialogClose asChild>
-            <Button variant="outline">Close</Button>
+            <Button variant="outline">{t("Close")}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>
@@ -163,18 +174,19 @@ function MobileParseLinkDrawer({
   onOpenChange: (open: boolean) => void;
   toggleParseLink: (link: string) => void;
 }) {
+  useLocale();
   const [link, setLink] = useState<string>("");
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="md:w-2/3" aria-describedby={undefined}>
         <div className="p-4">
-          <DrawerTitle className="mb-4">Parse Link</DrawerTitle>
+          <DrawerTitle className="mb-4">{t("Parse Link")}</DrawerTitle>
           <p className="mb-2 text-sm text-muted-foreground">
-            Enter a Telegram link to parse files from it. Example:{" "}
+            {t("Enter a Telegram link to parse files from it. Example:")}{" "}
             <code>https://t.me/username</code>
           </p>
           <Input
-            placeholder="Enter Telegram link"
+            placeholder={t("Enter Telegram link")}
             value={link}
             onChange={(e) => setLink(e.target.value)}
             className="mb-4"
@@ -189,9 +201,11 @@ function MobileParseLinkDrawer({
               toggleParseLink(link);
             }}
           >
-            Submit
+            {t("Submit")}
           </Button>
-          <DrawerClose render={<Button variant="outline">Close</Button>} />
+          <DrawerClose
+            render={<Button variant="outline">{t("Close")}</Button>}
+          />
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

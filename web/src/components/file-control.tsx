@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { type DownloadStatus, type TelegramFile } from "@/lib/types";
 import { useFileControl } from "@/hooks/use-file-control";
 import { Button } from "@/components/ui/button";
@@ -57,6 +61,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 function TelegramSeedIcon({ className }: { className?: string }) {
+  useLocale();
   return (
     <Image
       src="/telegram-seed.svg"
@@ -134,6 +139,7 @@ export default function FileControl({
     patch: Partial<TelegramFile>,
   ) => Promise<void>;
 }) {
+  useLocale();
   const router = useRouter();
   const { executeMethod, isMethodExecuting } = useTelegramMethod();
   const { settings } = useSettings();
@@ -169,7 +175,7 @@ export default function FileControl({
 
   const removeBtnProps: ActionButtonProps = {
     onClick: () => setDeleteConfirmOpen(true),
-    tooltipText: "Remove local file",
+    tooltipText: t("Remove local file"),
     icon: <Trash2 className={iconSize} />,
     loading: removing,
     tone: "danger",
@@ -194,7 +200,7 @@ export default function FileControl({
             if (!result) {
               toast({
                 variant: "error",
-                description: "Failed to get message thread",
+                description: t("Failed to get message thread"),
               });
               return;
             }
@@ -209,12 +215,12 @@ export default function FileControl({
           .catch(() => {
             toast({
               variant: "error",
-              description: "Failed to get message thread",
+              description: t("Failed to get message thread"),
             });
           });
       }
     },
-    tooltipText: "View Comments",
+    tooltipText: t("View Comments"),
     icon: <MessageCircle className={iconSize} />,
     loading: isMethodExecuting,
   };
@@ -223,7 +229,7 @@ export default function FileControl({
     idle: [
       {
         onClick: () => start(file.id),
-        tooltipText: "Start Download",
+        tooltipText: t("Start Download"),
         icon: <Download className={iconSize} />,
         loading: starting,
         tone: "primary",
@@ -248,7 +254,7 @@ export default function FileControl({
       },
       {
         onClick: () => cancel(file.id),
-        tooltipText: "Cancel download",
+        tooltipText: t("Cancel download"),
         icon: <CircleStop className={iconSize} />,
         loading: cancelling,
         tone: "danger",
@@ -264,7 +270,7 @@ export default function FileControl({
       },
       {
         onClick: () => cancel(file.id),
-        tooltipText: "Cancel download",
+        tooltipText: t("Cancel download"),
         icon: <CircleStop className={iconSize} />,
         loading: cancelling,
         tone: "danger",
@@ -289,8 +295,8 @@ export default function FileControl({
     file.downloadStatus === "completed" &&
     Boolean(
       file.seedResourceId ??
-        file.sharedResourceId ??
-        (file.uniqueId.startsWith("seed:") ? file.uniqueId.slice(5) : null),
+      file.sharedResourceId ??
+      (file.uniqueId.startsWith("seed:") ? file.uniqueId.slice(5) : null),
     );
 
   const isActivelySeeding =
@@ -316,10 +322,10 @@ export default function FileControl({
           event.stopPropagation();
         }}
       >
-        <TooltipWrapper content="Missing Original Message">
+        <TooltipWrapper content={t("Missing Original Message")}>
           <span
             role="img"
-            aria-label="Missing original message"
+            aria-label={t("Missing original message")}
             className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400"
           >
             <Link2Off className={iconSize} />
@@ -327,7 +333,7 @@ export default function FileControl({
         </TooltipWrapper>
         {deleteConfirmOpen ? (
           <div
-            className="flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150"
+            className="flex items-center gap-1 duration-150 animate-in fade-in zoom-in-95"
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -395,8 +401,8 @@ export default function FileControl({
             isMobile={isMobile}
             tooltipText={
               file.shareStatus === "PUBLISH_PENDING"
-                ? "Sharing in progress"
-                : "Share to telegram-seed"
+                ? t("Sharing in progress")
+                : t("Share to telegram-seed")
             }
             icon={<TelegramSeedIcon className={iconSize} />}
             loading={false}
@@ -411,7 +417,7 @@ export default function FileControl({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Seeding options"
+                aria-label={t("Seeding options")}
                 className={cn(
                   "size-7 rounded-md text-muted-foreground shadow-none transition-colors duration-150 hover:bg-emerald-500/10 hover:text-emerald-700 focus-visible:ring-2 dark:hover:text-emerald-300",
                   isMobile && "size-8 rounded-lg",
@@ -437,7 +443,7 @@ export default function FileControl({
                   ) : (
                     <Play className="size-4" />
                   )}
-                  Start seeding
+                  {t("Start seeding")}
                 </DropdownMenuItem>
               ) : file.torrentStatus === "PAUSED" ? (
                 <DropdownMenuItem
@@ -455,7 +461,7 @@ export default function FileControl({
                   ) : (
                     <Play className="size-4" />
                   )}
-                  Resume seeding
+                  {t("Resume seeding")}
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
@@ -471,7 +477,7 @@ export default function FileControl({
                   ) : (
                     <Pause className="size-4" />
                   )}
-                  Pause seeding
+                  {t("Pause seeding")}
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -483,7 +489,7 @@ export default function FileControl({
                 }}
               >
                 <Pencil className="size-4" />
-                Edit index-metadata
+                {t("Edit index-metadata")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="gap-2"
@@ -494,7 +500,7 @@ export default function FileControl({
                 }}
               >
                 <Gauge className="size-4" />
-                Set upload limit
+                {t("Set upload limit")}
               </DropdownMenuItem>
               {file.torrentStatus !== "STOPPED" && (
                 <>
@@ -512,7 +518,7 @@ export default function FileControl({
                     ) : (
                       <CircleStop className="size-4" />
                     )}
-                    Cancel seeding
+                    {t("Cancel seeding")}
                   </DropdownMenuItem>
                 </>
               )}
@@ -525,7 +531,7 @@ export default function FileControl({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="More file actions"
+                aria-label={t("More file actions")}
                 className="size-8 rounded-[10px] text-muted-foreground shadow-none"
               >
                 <MoreHorizontal className={iconSize} />
@@ -543,7 +549,7 @@ export default function FileControl({
                   ) : (
                     <MessageCircle />
                   )}
-                  View comments
+                  {t("View comments")}
                 </DropdownMenuItem>
               )}
               {showReplyAction && showShareAction && <DropdownMenuSeparator />}
@@ -555,8 +561,8 @@ export default function FileControl({
                 >
                   <TelegramSeedIcon />
                   {file.shareStatus === "PUBLISH_PENDING"
-                    ? "Sharing in progress"
-                    : "Share to telegram-seed"}
+                    ? t("Sharing in progress")
+                    : t("Share to telegram-seed")}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -568,7 +574,7 @@ export default function FileControl({
             return (
               <div
                 key="delete-confirm-inline"
-                className="flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150"
+                className="flex items-center gap-1 duration-150 animate-in fade-in zoom-in-95"
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -726,6 +732,7 @@ function SeedUploadLimitDialog({
   submitting: boolean;
   onSubmit: (uploadLimitBytesPerSecond: number) => Promise<void>;
 }) {
+  useLocale();
   const [limitKib, setLimitKib] = useState("0");
   const numericLimit = Number(limitKib);
   const isValid =
@@ -742,9 +749,11 @@ function SeedUploadLimitDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Set upload limit</DialogTitle>
+          <DialogTitle>{t("Set upload limit")}</DialogTitle>
           <DialogDescription>
-            Enter KiB/s for this seed resource. Use 0 for unlimited upload.
+            {t(
+              "Enter KiB/s for this seed resource. Use 0 for unlimited upload.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -755,7 +764,9 @@ function SeedUploadLimitDialog({
           }}
         >
           <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium">Upload limit KiB/s</span>
+            <span className="text-sm font-medium">
+              {t("Upload limit KiB/s")}
+            </span>
             <Input
               type="number"
               min={0}
@@ -771,13 +782,16 @@ function SeedUploadLimitDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button type="submit" disabled={!isValid || submitting}>
               {submitting && (
-                <LoaderCircle data-icon="inline-start" className="animate-spin" />
+                <LoaderCircle
+                  data-icon="inline-start"
+                  className="animate-spin"
+                />
               )}
-              Save limit
+              {t("Save limit")}
             </Button>
           </DialogFooter>
         </form>
@@ -787,6 +801,7 @@ function SeedUploadLimitDialog({
 }
 
 export function MobileFileControl({ file }: { file: TelegramFile }) {
+  useLocale();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const {
     start,
@@ -830,7 +845,9 @@ export function MobileFileControl({ file }: { file: TelegramFile }) {
           ) : (
             <Download />
           )}
-          <span>{file.downloadStatus === "error" ? "Retry" : "Download"}</span>
+          <span>
+            {file.downloadStatus === "error" ? t("Retry") : t("Download")}
+          </span>
         </Button>
       )}
       {isActive && (
@@ -848,7 +865,7 @@ export function MobileFileControl({ file }: { file: TelegramFile }) {
               <Play />
             )}
             <span>
-              {file.downloadStatus === "downloading" ? "Pause" : "Resume"}
+              {file.downloadStatus === "downloading" ? t("Pause") : t("Resume")}
             </span>
           </Button>
           <Button
@@ -865,7 +882,7 @@ export function MobileFileControl({ file }: { file: TelegramFile }) {
             ) : (
               <CircleStop />
             )}
-            <span>Cancel</span>
+            <span>{t("Cancel")}</span>
           </Button>
         </>
       )}
@@ -884,10 +901,10 @@ export function MobileFileControl({ file }: { file: TelegramFile }) {
           )}
           <span>
             {file.torrentStatus === "SEEDING"
-              ? "Pause seed"
+              ? t("Pause seed")
               : file.torrentStatus === "STOPPED" || !file.torrentStatus
-                ? "Start seeding"
-                : "Resume seed"}
+                ? t("Start seeding")
+                : t("Resume seed")}
           </span>
         </Button>
       )}
@@ -906,13 +923,14 @@ export function MobileFileControl({ file }: { file: TelegramFile }) {
           ) : (
             <CircleStop />
           )}
-          <span>Stop seeding</span>
+          <span>{t("Stop seeding")}</span>
         </Button>
       )}
-      {file.downloadStatus === "completed" && !isSeedComplete && (
-        confirmingDelete ? (
+      {file.downloadStatus === "completed" &&
+        !isSeedComplete &&
+        (confirmingDelete ? (
           <div
-            className="flex flex-1 items-center gap-2 animate-in fade-in zoom-in-95 duration-150"
+            className="flex flex-1 items-center gap-2 duration-150 animate-in fade-in zoom-in-95"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -937,7 +955,7 @@ export function MobileFileControl({ file }: { file: TelegramFile }) {
               ) : (
                 <Trash2 className="mr-1.5 h-4 w-4" />
               )}
-              <span>Confirm Delete</span>
+              <span>{t("Confirm Delete")}</span>
             </Button>
             <Button
               variant="outline"
@@ -968,12 +986,9 @@ export function MobileFileControl({ file }: { file: TelegramFile }) {
             disabled={removing}
           >
             {removing ? <LoaderCircle className="animate-spin" /> : <Trash2 />}
-            <span>Remove local file</span>
+            <span>{t("Remove local file")}</span>
           </Button>
-        )
-      )}
+        ))}
     </div>
   );
 }
-
-

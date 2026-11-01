@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { cn } from "@/lib/utils";
 import { type RowHeight } from "@/components/table-row-height-switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -51,6 +55,7 @@ export default function FileRow({
   onCheckedChange,
   onFileClick,
 }: FileRowProps) {
+  useLocale();
   const { rowHeight, dynamicClass, columns } = properties;
   const { downloadProgress, downloadSpeed } = useFileSpeed(file);
   const [hovered, setHovered] = useState(false);
@@ -62,7 +67,7 @@ export default function FileRow({
         onClick={onFileClick}
       >
         {file.reactionCount > 0 && (
-          <TooltipWrapper content="Reaction Count">
+          <TooltipWrapper content={t("Reaction Count")}>
             <Badge className="absolute -left-1 -top-1.5 z-10 flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-blue-500 text-sm hover:bg-blue-600">
               {file.reactionCount}
             </Badge>
@@ -73,7 +78,7 @@ export default function FileRow({
     ),
     type: (
       <div className="flex flex-col items-center">
-        <span className="text-sm capitalize">{file.type}</span>
+        <span className="text-sm capitalize">{t(file.type)}</span>
         {process.env.NODE_ENV === "development" && (
           <div className="flex flex-col items-center text-xs">
             <span className="text-xs">{file.id}</span>
@@ -98,7 +103,7 @@ export default function FileRow({
             }
             className="mb-0.5 h-4 px-1.5 text-[10px] uppercase tracking-wider"
           >
-            {file.torrentStatus ?? (file.sharedByMe ? "PUBLISHED" : "IDLE")}
+            {t(file.torrentStatus ?? (file.sharedByMe ? "PUBLISHED" : "IDLE"))}
           </Badge>
           <div className="flex flex-col items-center whitespace-nowrap font-mono text-[10px] text-muted-foreground">
             <span>
@@ -106,8 +111,8 @@ export default function FileRow({
               {prettyBytes(file.torrentDownloadSpeed ?? 0)}/s
             </span>
             <span>
-              Up: {prettyBytes(file.torrentUploadedBytes ?? 0)} · Ratio:{" "}
-              {(file.torrentRatio ?? 0).toFixed(2)}
+              {t("Up:")} {prettyBytes(file.torrentUploadedBytes ?? 0)}{" "}
+              {t("· Ratio:")} {(file.torrentRatio ?? 0).toFixed(2)}
             </span>
           </div>
         </div>

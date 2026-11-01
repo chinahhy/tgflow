@@ -58,7 +58,7 @@ body:
         Please provide relevant logs, if available.  
         Run the following command to get logs:
         ```bash
-        docker logs telegram-files
+        docker compose logs tgflow
         ```
         You can also adjust the logging level using the environment variable: `LOG_LEVEL=FINE`
       placeholder: Paste logs here

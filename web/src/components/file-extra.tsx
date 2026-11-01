@@ -1,3 +1,7 @@
+"use client";
+import { t, formatDate } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import {
   Captions,
   Clock,
@@ -17,7 +21,7 @@ import React from "react";
 import { type TelegramFile } from "@/lib/types";
 import { type RowHeight } from "@/components/table-row-height-switch";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "@/lib/i18n-date";
 import { cn } from "@/lib/utils";
 import useIsMobile from "@/hooks/use-is-mobile";
 
@@ -28,6 +32,7 @@ interface FileExtraProps {
 }
 
 function FileName({ file, rowHeight, ellipsis }: FileExtraProps) {
+  useLocale();
   if (!file.fileName) {
     return null;
   }
@@ -52,6 +57,7 @@ function FileName({ file, rowHeight, ellipsis }: FileExtraProps) {
 }
 
 function FileCaption({ file, rowHeight, ellipsis }: FileExtraProps) {
+  useLocale();
   if (!file.caption) {
     return null;
   }
@@ -89,6 +95,7 @@ function FileCaption({ file, rowHeight, ellipsis }: FileExtraProps) {
 }
 
 function FilePath({ file, ellipsis, rowHeight }: FileExtraProps) {
+  useLocale();
   const [, copyToClipboard] = useCopyToClipboard();
   const isMobile = useIsMobile();
 
@@ -129,6 +136,7 @@ function FilePath({ file, ellipsis, rowHeight }: FileExtraProps) {
 }
 
 function FileTime({ file }: FileExtraProps) {
+  useLocale();
   const isMobile = useIsMobile();
   return (
     <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
@@ -145,7 +153,9 @@ function FileTime({ file }: FileExtraProps) {
         </TooltipTrigger>
         <TooltipContent>
           <div className="max-w-80 text-wrap rounded p-2">
-            {`Message received at ${new Date(file.date * 1000).toLocaleString()}`}
+            {t("Message received at {date}", {
+              date: formatDate(file.date * 1000),
+            })}
           </div>
         </TooltipContent>
       </Tooltip>
@@ -163,7 +173,9 @@ function FileTime({ file }: FileExtraProps) {
           </TooltipTrigger>
           <TooltipContent>
             <div className="max-w-80 text-wrap rounded p-2">
-              {`File downloaded at ${new Date(file.completionDate).toLocaleString()}`}
+              {t("File downloaded at {date}", {
+                date: formatDate(file.completionDate),
+              })}
             </div>
           </TooltipContent>
         </Tooltip>
@@ -177,6 +189,7 @@ function hasValue(value: string | null | undefined): boolean {
 }
 
 export default function FileExtra(fileExtraProps: FileExtraProps) {
+  useLocale();
   const { file, rowHeight } = fileExtraProps;
   if (rowHeight === "s") {
     const renderOrder = [

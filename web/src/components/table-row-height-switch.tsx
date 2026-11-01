@@ -1,4 +1,7 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Rows2, Rows3, Rows4 } from "lucide-react";
@@ -40,6 +43,7 @@ export function useRowHeightLocalStorage(
   tableName: string,
   defaultValue: RowHeight,
 ) {
+  useLocale();
   const [rowHeight, setRowHeight, clearRowHeight] = useLocalStorage<RowHeight>(
     `${tableName}Height`,
     defaultValue,
@@ -55,6 +59,7 @@ export const TableRowHeightSwitch = ({
   rowHeight: RowHeight;
   setRowHeightAction: (e: RowHeight) => void;
 }) => {
+  useLocale();
   return (
     <Tabs
       value={rowHeight}
@@ -70,7 +75,7 @@ export const TableRowHeightSwitch = ({
             value={id}
             className="px-2 shadow-none data-[state=active]:bg-input data-[state=active]:ring-border"
           >
-            <span role="img" aria-label={`${label} size`}>
+            <span role="img" aria-label={t("{size} size", { size: t(label) })}>
               {icon}
             </span>
           </TabsTrigger>

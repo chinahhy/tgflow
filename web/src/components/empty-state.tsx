@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,6 +14,7 @@ import {
   UserPlus,
   Workflow,
 } from "lucide-react";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { AccountList } from "./account-list";
 import { type TelegramAccount } from "@/lib/types";
 import { PlatformTelegramIcon } from "@/components/platform-telegram-icon";
@@ -42,6 +47,7 @@ export function EmptyState({
   message,
   onSelectAccount,
 }: EmptyStateProps) {
+  useLocale();
   const isMobile = useIsMobile();
   const { logout } = useAdminSession();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -61,8 +67,9 @@ export function EmptyState({
         <MessageSquare className="mb-4 h-16 w-16 text-muted-foreground" />
         <h2 className="mb-2 text-2xl font-semibold">{message}</h2>
         <p className="text-muted-foreground">
-          Choose a chat from the dropdown menu above to view and manage its
-          files.
+          {t(
+            "Choose a chat from the dropdown menu above to view and manage its files.",
+          )}
         </p>
       </div>
     );
@@ -70,14 +77,15 @@ export function EmptyState({
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="mb-2 flex justify-end">
+      <div className="mb-2 flex flex-wrap justify-end gap-2">
+        <LanguageSwitcher />
         <PlatformBindingShortcut />
-        <TooltipWrapper content="Log out">
+        <TooltipWrapper content={t("Log out")}>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="Log out"
+            aria-label={t("Log out")}
             disabled={loggingOut}
             onClick={() => void handleLogout()}
           >
@@ -92,11 +100,12 @@ export function EmptyState({
             {!isMobile && (
               <>
                 <h2 className="mb-2 text-2xl font-semibold">
-                  Select an Account
+                  {t("Select an Account")}
                 </h2>
                 <p className="mb-4 max-w-md text-muted-foreground">
-                  Choose a Telegram account to view and manage your files. You
-                  can add more accounts using the button below.
+                  {t(
+                    "Choose a Telegram account to view and manage your files. You can add more accounts using the button below.",
+                  )}
                 </p>
               </>
             )}
@@ -104,10 +113,13 @@ export function EmptyState({
         ) : (
           <>
             <PlatformTelegramIcon className="mb-4 size-16 text-foreground" />
-            <h2 className="mb-2 text-2xl font-semibold">No Accounts Found</h2>
+            <h2 className="mb-2 text-2xl font-semibold">
+              {t("No Accounts Found")}
+            </h2>
             <p className="mb-4 max-w-md text-muted-foreground">
-              Add a Telegram account to start managing your files. You can add
-              multiple accounts and switch between them.
+              {t(
+                "Add a Telegram account to start managing your files. You can add multiple accounts and switch between them.",
+              )}
             </p>
           </>
         )}
@@ -117,7 +129,7 @@ export function EmptyState({
               <BorderBeam size={60} duration={12} delay={9} />
               <Button variant="outline">
                 <UserPlus className="mr-2 h-4 w-4" />
-                Add Account
+                {t("Add Account")}
               </Button>
             </div>
           </AccountDialog>
@@ -135,7 +147,7 @@ export function EmptyState({
             opacityBase={0.1}
             opacityMid={0.4}
             opacityPeak={0.95}
-            ariaLabel="Loading account"
+            ariaLabel={t("Loading account")}
           />
         </div>
       )}
@@ -154,6 +166,7 @@ interface FileCount {
 }
 
 function AllFiles() {
+  useLocale();
   const router = useRouter();
   const { data, error, isLoading } = useSWR<FileCount, Error>(`/files/count`);
 
@@ -162,7 +175,7 @@ function AllFiles() {
       <Card className="mx-auto mb-8 max-w-5xl">
         <CardContent className="flex items-center justify-center p-6 text-red-500">
           <AlertTriangle className="mr-2" />
-          Failed to load file counts
+          {t("Failed to load file counts")}
         </CardContent>
       </Card>
     );
@@ -173,7 +186,7 @@ function AllFiles() {
       <Card className="mx-auto mb-8 max-w-5xl">
         <CardContent className="flex items-center justify-center p-6 text-gray-500">
           <Loader2 className="mr-2 animate-spin" />
-          Loading file counts...
+          {t("Loading file counts...")}
         </CardContent>
       </Card>
     );
@@ -186,21 +199,21 @@ function AllFiles() {
           <div className="flex items-center justify-center gap-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-800">
             <Check className="text-green-500" />
             <span className="hidden text-sm font-medium md:inline-block">
-              Downloaded
+              {t("Downloaded")}
             </span>
             <span className="text-sm font-medium">{data.completed}</span>
           </div>
           <div className="flex items-center justify-center gap-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-800">
             <Download className="text-blue-500" />
             <span className="hidden text-sm font-medium md:inline-block">
-              Downloading
+              {t("Downloading")}
             </span>
             <span className="text-sm font-medium">{data.downloading}</span>
           </div>
           <div className="flex items-center justify-center gap-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-800">
             <HardDrive className="text-purple-500" />
             <span className="hidden text-sm font-medium md:inline-block">
-              Size
+              {t("Size")}
             </span>
             <span className="text-sm font-medium">
               {prettyBytes(data.downloadedSize)}
@@ -214,14 +227,14 @@ function AllFiles() {
             onClick={() => router.push("/automations")}
           >
             <Workflow data-icon="inline-start" />
-            Automations
+            {t("Automations")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => router.push("/files")}
           >
-            Files
+            {t("Files")}
             <ArrowRight data-icon="inline-end" />
           </Button>
         </div>

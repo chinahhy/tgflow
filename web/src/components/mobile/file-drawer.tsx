@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import type { TelegramFile } from "@/lib/types";
 import React, { useEffect, useState } from "react";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -30,6 +34,7 @@ export default function FileDrawer({
   handleLoadMore,
   isLoading,
 }: FileDrawerProps) {
+  useLocale();
   const [viewing, setViewing] = useState(initialViewing);
 
   // 防止在下载状态变化时意外调用onFileChange导致drawer关闭
@@ -147,12 +152,12 @@ export default function FileDrawer({
         className={cn(
           "focus:outline-none",
           viewing &&
-            "!inset-0 !m-0 !h-dvh !max-h-dvh !w-screen !max-w-full !rounded-none !border-none bg-black [--drawer-inset:0px] [--drawer-content-height:100dvh] [--drawer-content-max-height:100dvh]",
+            "!inset-0 !m-0 !h-dvh !max-h-dvh !w-screen !max-w-full !rounded-none !border-none bg-black [--drawer-content-height:100dvh] [--drawer-content-max-height:100dvh] [--drawer-inset:0px]",
         )}
         aria-describedby={undefined}
       >
         <VisuallyHidden>
-          <DrawerTitle>File Details</DrawerTitle>
+          <DrawerTitle>{t("File Details")}</DrawerTitle>
         </VisuallyHidden>
         {isLoading && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -163,13 +168,13 @@ export default function FileDrawer({
               opacityBase={0.1}
               opacityMid={0.4}
               opacityPeak={0.95}
-              ariaLabel="Loading file details"
+              ariaLabel={t("Loading file details")}
             />
           </div>
         )}
         <div
           className={cn(
-            "grid grid-cols-1 grid-rows-1 flex-1 min-h-0 w-full overflow-hidden",
+            "grid min-h-0 w-full flex-1 grid-cols-1 grid-rows-1 overflow-hidden",
             viewing && "h-dvh w-screen",
           )}
         >
@@ -186,7 +191,7 @@ export default function FileDrawer({
                 opacity: { duration: 0.2 },
               }}
               className={cn(
-                "col-start-1 row-start-1 flex flex-col min-h-0 w-full overflow-hidden",
+                "col-start-1 row-start-1 flex min-h-0 w-full flex-col overflow-hidden",
                 viewing ? "h-dvh w-screen" : "h-full",
               )}
               style={{
@@ -198,10 +203,7 @@ export default function FileDrawer({
                 <div className="relative flex h-dvh w-screen items-center justify-center bg-black">
                   {file.type === "video" &&
                   file.downloadStatus === "completed" ? (
-                    <FileVideo
-                      file={file}
-                      onFileChange={onFileChange}
-                    />
+                    <FileVideo file={file} onFileChange={onFileChange} />
                   ) : (
                     <>
                       <FileImage file={file} className="h-full" isFullPreview />

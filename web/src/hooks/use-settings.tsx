@@ -1,4 +1,7 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import React, { createContext, type ReactNode, useContext } from "react";
 import useSWR from "swr";
 import { type SettingKey, SettingKeys, type Settings } from "@/lib/types";
@@ -25,6 +28,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
   children,
   keys = [...SettingKeys],
 }) => {
+  useLocale();
   const {
     data: settings,
     isLoading,
@@ -52,7 +56,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       // @ts-expect-error
       await mutate((current) => ({ ...current, ...updates }), false);
     }
-    toast({ variant: "success", description: "Settings updated" });
+    toast({ variant: "success", description: t("Settings updated") });
   };
 
   const setSetting = async (key: SettingKey, value: string) => {
@@ -71,6 +75,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 };
 
 export const useSettings = (): SettingsContextType => {
+  useLocale();
   const context = useContext(SettingsContext);
   if (!context) {
     throw new Error("useSettings must be used within a SettingsProvider");

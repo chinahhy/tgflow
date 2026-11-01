@@ -1,4 +1,6 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import { type TelegramFile } from "@/lib/types";
 import { Check, LoaderIcon, Plus, Tag } from "lucide-react";
@@ -18,6 +20,7 @@ function useBatchUpdateTags({
   files: TelegramFile[];
   onTagsUpdate?: (tags: string[]) => void;
 }) {
+  useLocale();
   const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
@@ -85,6 +88,7 @@ export function useUpdateTags({
   file: TelegramFile;
   onTagsUpdate?: (tags: string[]) => void;
 }) {
+  useLocale();
   const [tags, setTags] = useState<string[]>(split(",", file?.tags));
 
   useEffect(() => {
@@ -140,6 +144,7 @@ export default function FileTags({
   align = "start",
   isPreviewOverlay = false,
 }: FileTagsProps) {
+  useLocale();
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
   const { tags, toggleUpdateTags, isMutating } = useUpdateTags({
@@ -194,7 +199,7 @@ export default function FileTags({
                 className="flex items-center gap-1.5 rounded-full border border-dashed border-white/30 bg-black/45 px-3 py-1.5 text-xs font-medium text-white/90 shadow-xl outline-none backdrop-blur-md transition hover:bg-white/30 focus:outline-none focus-visible:outline-none focus-visible:ring-0 active:scale-95"
               >
                 <Tag className="h-3.5 w-3.5" />
-                <span>Bind Tag</span>
+                <span>{t("Bind Tag")}</span>
               </button>
             )}
           </div>
@@ -216,7 +221,7 @@ export default function FileTags({
 
           {availableTags.length === 0 ? (
             <div className="py-2 text-center text-xs text-white/50">
-              No available tags (Please configure tags in settings)
+              {t("No available tags (Please configure tags in settings)")}
             </div>
           ) : (
             <div className="no-scrollbar flex max-h-44 flex-wrap gap-1.5 overflow-y-auto">
@@ -288,7 +293,7 @@ export default function FileTags({
         )}
         {availableTags.length === 0 ? (
           <div className="py-2 text-center text-xs text-white/50">
-            No available tags (Please configure tags in settings)
+            {t("No available tags (Please configure tags in settings)")}
           </div>
         ) : (
           <div className="no-scrollbar flex max-h-44 flex-wrap gap-1.5 overflow-y-auto">
@@ -328,6 +333,7 @@ interface BatchFileTagsProps {
 }
 
 export function BatchFileTags({ files, onTagsUpdate }: BatchFileTagsProps) {
+  useLocale();
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
   const { tags, setTags, toggleUpdateTags, isMutating } = useBatchUpdateTags({
@@ -361,7 +367,7 @@ export function BatchFileTags({ files, onTagsUpdate }: BatchFileTagsProps) {
       <PopoverTrigger asChild>
         <Button size="sm" className="focus:outline-none focus-visible:ring-0">
           <Tag className="mr-2 h-4 w-4" />
-          Edit Tags
+          {t("Edit Tags")}
           {`(${files.length})`}
         </Button>
       </PopoverTrigger>
@@ -371,11 +377,11 @@ export function BatchFileTags({ files, onTagsUpdate }: BatchFileTagsProps) {
         className="z-[140] w-72 rounded-xl border border-white/15 bg-zinc-900/95 p-3 text-white shadow-2xl outline-none backdrop-blur-md focus:outline-none focus-visible:ring-0"
       >
         <div className="mb-2 text-xs text-white/70">
-          {`Batch edit tags for ${files.length} ${files.length === 1 ? "file" : "files"}`}
+          {t("Batch edit tags for {count} files", { count: files.length })}
         </div>
         {availableTags.length === 0 ? (
           <div className="py-2 text-center text-xs text-white/50">
-            No available tags
+            {t("No available tags")}
           </div>
         ) : (
           <div className="no-scrollbar flex max-h-44 flex-wrap gap-1.5 overflow-y-auto">

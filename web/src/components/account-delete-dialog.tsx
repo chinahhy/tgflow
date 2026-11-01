@@ -1,4 +1,7 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import {
   Dialog,
   DialogContent,
@@ -24,6 +27,7 @@ export default function AccountDeleteDialog({
   telegramId: string;
   className?: string;
 }) {
+  useLocale();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const { mutate } = useSWRConfig();
@@ -31,7 +35,10 @@ export default function AccountDeleteDialog({
   const { trigger: triggerDelete, isMutating: isDeleteMutating } =
     useSWRMutation(`/telegram/${telegramId}/delete`, POST, {
       onSuccess: () => {
-        toast({ variant: "success", title: "Account deleted successfully!" });
+        toast({
+          variant: "success",
+          title: t("Account deleted successfully!"),
+        });
         resetAccount();
         // 延迟关闭对话框
         setTimeout(() => {
@@ -65,11 +72,12 @@ export default function AccountDeleteDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <DialogHeader>
-          <DialogTitle>Delete Telegram Account</DialogTitle>
+          <DialogTitle>{t("Delete Telegram Account")}</DialogTitle>
         </DialogHeader>
         <DialogDescription>
-          Are you sure you want to delete your account? This action is
-          irreversible.
+          {t(
+            "Are you sure you want to delete your account? This action is irreversible.",
+          )}
         </DialogDescription>
         <div className="flex justify-end gap-2">
           <Button
@@ -77,14 +85,14 @@ export default function AccountDeleteDialog({
             onClick={() => triggerDelete()}
             disabled={debounceIsDeleteMutating}
           >
-            {debounceIsDeleteMutating ? "Deleting..." : "Delete"}
+            {debounceIsDeleteMutating ? t("Deleting...") : t("Delete")}
           </Button>
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
             disabled={debounceIsDeleteMutating}
           >
-            Cancel
+            {t("Cancel")}
           </Button>
         </div>
       </DialogContent>

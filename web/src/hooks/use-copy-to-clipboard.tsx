@@ -1,7 +1,12 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import { useCallback, useState } from "react";
 import { toast } from "./use-toast";
 
 export function useCopyToClipboard(): [string | null, (value: string) => void] {
+  useLocale();
   const [state, setState] = useState<string | null>(null);
 
   const copyToClipboard = useCallback((value: string) => {
@@ -12,7 +17,7 @@ export function useCopyToClipboard(): [string | null, (value: string) => void] {
           setState(value);
           toast({
             variant: "success",
-            title: "Successfully copied to clipboard",
+            title: t("Successfully copied to clipboard"),
             description: (
               <p className="line-clamp-1">
                 <code className="text-xs">{value}</code>
@@ -28,7 +33,7 @@ export function useCopyToClipboard(): [string | null, (value: string) => void] {
         setState(value);
         toast({
           variant: "success",
-          title: "Successfully copied to clipboard",
+          title: t("Successfully copied to clipboard"),
           description: (
             <p className="line-clamp-1">
               <code className="text-xs">{value}</code>

@@ -1,190 +1,95 @@
-name: Docker
+name: TGFlow CI and Docker
 on:
   push:
-    branches:
-      - "dev"
-    paths:
-      - 'api/**'
-      - 'web/**'
-      - 'Dockerfile'
-      - 'entrypoint.sh'
-      - 'nginx.conf.template'
-      - 'VERSION'
-  release:
-    types: [ published ]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  GHCR_REPO: ghcr.io/${{ github.repository }}
-
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
 permissions:
   contents: read
-  packages: write
-
+concurrency:
+  group: tgflow-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  artifacts:
-    runs-on: ubuntu-latest
+  validate:
+    uses: ./.github/workflows/ci.yml
+  docker:
+    needs: validate
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 23
-        uses: actions/setup-java@v5
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
         with:
-          java-version: '23'
-          distribution: 'temurin'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Build API artifact
-        working-directory: ./api
-        run: |
-          chmod +x gradlew
-          ./gradlew shadowJar --no-daemon
-          mkdir -p ../.docker-artifacts
-          cp build/libs/telegram-files.jar ../.docker-artifacts/api.jar
-          jdeps --print-module-deps --ignore-missing-deps ../.docker-artifacts/api.jar > ../.docker-artifacts/dependencies.txt
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Build web artifact
-        working-directory: ./web
-        env:
-          NEXT_PUBLIC_API_URL: /api
-          NEXT_PUBLIC_WS_URL: /ws
-          NEXT_TELEMETRY_DISABLED: '1'
-          SKIP_ENV_VALIDATION: '1'
-          npm_config_fetch_retry_mintimeout: '20000'
-          npm_config_fetch_retry_maxtimeout: '120000'
-          npm_config_fetch_retries: '5'
-        run: |
-          npm ci
-          npm run build
-          mkdir -p ../.docker-artifacts/web
-          cp -R out/. ../.docker-artifacts/web/
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-build-artifacts
+          name: docker-api
           path: .docker-artifacts
-          if-no-files-found: error
-          include-hidden-files: true
-          retention-days: 1
-
-  build:
-    needs: artifacts
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            platform: linux/amd64
-            platform_tag: linux-amd64
-          - runner: ubuntu-24.04-arm
-            platform: linux/arm64
-            platform_tag: linux-arm64
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: docker-build-artifacts
-          path: .docker-artifacts
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.10.0
-
-      - name: Login to registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3.1.0
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5.5.1
-        with:
-          images: ${{ env.GHCR_REPO }}
-          tags: |
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-') }}
-            type=raw,value=${{ github.ref_name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
-            type=ref,event=branch
-
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@v6.15.0
+          name: docker-web
+          path: .docker-artifacts/web
+      - name: Verify prerequisites
+        run: |
+          test -s .docker-artifacts/api.jar
+          test -s .docker-artifacts/dependencies.txt
+          test -s .docker-artifacts/web/index.html
+          file tdlib/linux_amd64/libtdjni.so | grep -q 'x86-64'
+      - uses: docker/setup-buildx-action@v3
+      - name: Build AMD64 image once
+        uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: ${{ matrix.platform }}
-          labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,"name=${{ env.GHCR_REPO }}",push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=build-${{ matrix.platform_tag }}
-          cache-to: type=gha,scope=build-${{ matrix.platform_tag }},mode=${{ github.event_name == 'release' && 'max' || 'min' }}
-
-      - name: Export digest
+          platforms: linux/amd64
+          tags: tgflow:ci
+          load: true
+          cache-from: type=gha,scope=tgflow-amd64
+          cache-to: type=gha,scope=tgflow-amd64,mode=max
+      - name: Smoke test the built container
         run: |
-          mkdir -p ${{ runner.temp }}/digests
-          digest="${{ steps.build-and-push.outputs.digest }}"
-          touch "${{ runner.temp }}/digests/${digest#sha256:}"
-
-      - name: Upload digest
-        uses: actions/upload-artifact@v4
-        with:
-          name: digests-${{ matrix.platform_tag }}
-          path: ${{ runner.temp }}/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  merge:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@v4
-        with:
-          path: ${{ runner.temp }}/digests
-          pattern: digests-*
-          merge-multiple: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.2.0
-
-      - name: Login to registry ${{ env.REGISTRY }}
-        uses: docker/login-action@v3.1.0
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5.5.1
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-') }}
-            type=raw,value=${{ github.ref_name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
-            type=ref,event=branch
-
-      - name: Create manifest list and push
-        working-directory: ${{ runner.temp }}/digests
+          docker run -d --name tgflow-smoke \
+            -e APP_ENV=prod -e APP_ROOT=/app/data \
+            -e TELEGRAM_API_ID=1 -e TELEGRAM_API_HASH=test-only-placeholder \
+            -e HTTP_SECURE_COOKIES=false -e SHARE_ENABLED=false \
+            -p 127.0.0.1:6543:80 tgflow:ci
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:6543/api/health > /dev/null; then break; fi
+            sleep 2
+          done
+          curl --fail --silent http://127.0.0.1:6543/api/health
+          curl --fail --silent http://127.0.0.1:6543/ | grep -q TGFlow
+          curl --fail --silent http://127.0.0.1:6543/api/auth/bootstrap/status | grep -q true
+      - name: Determine branch tag and Docker Hub readiness
+        id: release
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
-
-      - name: Inspect image
+          publish=false
+          tag=''
+          if [ "$GITHUB_REF" = refs/heads/main ]; then tag=latest; fi
+          if [ "$GITHUB_REF" = refs/heads/dev ]; then tag=dev; fi
+          if [ "$GITHUB_EVENT_NAME" != pull_request ] && [ -n "$tag" ] && [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            publish=true
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "$publish" = false ]; then
+            echo 'Image built and tested; publication skipped (PR, unsupported ref, or missing DOCKERHUB_USERNAME / DOCKERHUB_TOKEN).' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: docker/login-action@v3
+        if: steps.release.outputs.publish == 'true'
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Publish the tested image to its branch tag
+        if: steps.release.outputs.publish == 'true'
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          IMAGE_TAG: ${{ steps.release.outputs.tag }}
         run: |
-          docker buildx imagetools inspect ${{ env.GHCR_REPO }}:${{ steps.meta.outputs.version }}
+          image="$DOCKERHUB_USERNAME/tgflow:$IMAGE_TAG"
+          docker tag tgflow:ci "$image"
+          docker push "$image"
+          docker buildx imagetools inspect "$image"
+          echo "Published: $image" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove smoke-test container
+        if: always()
+        run: docker rm -f tgflow-smoke || true

@@ -1,4 +1,6 @@
 "use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -48,6 +50,7 @@ export function SourceAccessSelect({
   value: AccessScope;
   onValueChange: (value: AccessScope) => void;
 }) {
+  useLocale();
   const generatedId = useId();
   const triggerId = id ?? `source-access-${generatedId}`;
   const descriptionId = `${triggerId}-description`;
@@ -74,7 +77,7 @@ export function SourceAccessSelect({
             className="w-full justify-between"
             aria-describedby={descriptionId}
           >
-            {selected.label}
+            {t(selected.label)}
             <ChevronDown data-icon="inline-end" className="opacity-50" />
           </Button>
         </DropdownMenuTrigger>
@@ -93,11 +96,11 @@ export function SourceAccessSelect({
                 <DropdownMenuRadioItem
                   key={option.value}
                   value={option.value}
-                  aria-label={`${option.label}. ${option.description}`}
+                  aria-label={`${t(option.label)}. ${t(option.description)}`}
                   onFocus={() => setHighlightedScope(option.value)}
                   onPointerMove={() => setHighlightedScope(option.value)}
                 >
-                  {option.label}
+                  {t(option.label)}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -105,9 +108,9 @@ export function SourceAccessSelect({
               className="flex min-h-24 flex-col gap-1 rounded-md bg-muted p-3"
               aria-live="polite"
             >
-              <p className="text-sm font-medium">{highlighted.label}</p>
+              <p className="text-sm font-medium">{t(highlighted.label)}</p>
               <p className="text-sm text-muted-foreground">
-                {highlighted.description}
+                {t(highlighted.description)}
               </p>
             </div>
           </div>
@@ -118,7 +121,7 @@ export function SourceAccessSelect({
         className="text-sm text-muted-foreground"
         aria-live="polite"
       >
-        {selected.description}
+        {t(selected.description)}
       </p>
     </div>
   );

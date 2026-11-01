@@ -1,3 +1,7 @@
+"use client";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+
 import React, { type KeyboardEvent, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -17,10 +21,11 @@ interface TagsInputProps {
 export const TagsInput: React.FC<TagsInputProps> = ({
   value,
   onChange,
-  placeholder = "Enter the tag and press Enter...",
+  placeholder = t("Enter the tag and press Enter..."),
   maxTags = Infinity,
   className = "",
 }) => {
+  useLocale();
   const [inputValue, setInputValue] = useState<string>("");
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,7 +111,9 @@ export const TagsInput: React.FC<TagsInputProps> = ({
                   }}
                 >
                   <X className="h-3 w-3" />
-                  <span className="sr-only">Delete {tag}</span>
+                  <span className="sr-only">
+                    {t("Delete")} {tag}
+                  </span>
                 </Button>
               </Badge>
             </motion.div>
@@ -141,7 +148,7 @@ export const TagsInput: React.FC<TagsInputProps> = ({
               onClick={() => handleAddTag(inputValue)}
             >
               <Plus className="h-4 w-4" />
-              <span className="sr-only">Add tag</span>
+              <span className="sr-only">{t("Add tag")}</span>
             </Button>
           </motion.div>
         )}
