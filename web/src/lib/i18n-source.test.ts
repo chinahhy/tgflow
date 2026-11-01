@@ -1,13 +1,13 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import en from "@/locales/en.json";
 
 describe("visible source text", () => {
   it("keeps interface copy in resources and every literal translation key defined", () => {
-    const root = fileURLToPath(new URL("../", import.meta.url));
+    const root = path.resolve("src");
     const failures: string[] = [];
     const technical = new Set([
       "TGFlow",
