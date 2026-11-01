@@ -815,5 +815,12 @@
   "ONLINE": "ONLINE",
   "OFFLINE": "OFFLINE",
   "STOPPING": "STOPPING",
-  "PREPARING": "PREPARING"
+  "PREPARING": "PREPARING",
+  "Page not found": "Page not found",
+  "The requested page does not exist.": "The requested page does not exist.",
+  "Return home": "Return home",
+  "Unable to load this page": "Unable to load this page",
+  "Please try again. Your saved data has not been changed.": "Please try again. Your saved data has not been changed.",
+  "File type: {type}": "File type: {type}",
+  "MIME: {type}": "MIME: {type}"
 }

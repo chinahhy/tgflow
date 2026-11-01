@@ -815,5 +815,12 @@
   "ONLINE": "在线",
   "OFFLINE": "离线",
   "STOPPING": "正在停止",
-  "PREPARING": "准备中"
+  "PREPARING": "准备中",
+  "Page not found": "页面不存在",
+  "The requested page does not exist.": "请求的页面不存在。",
+  "Return home": "返回首页",
+  "Unable to load this page": "页面加载失败",
+  "Please try again. Your saved data has not been changed.": "请重试，已保存的数据保持不变。",
+  "File type: {type}": "文件类型：{type}",
+  "MIME: {type}": "MIME：{type}"
 }

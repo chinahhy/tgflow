@@ -96,6 +96,12 @@ test("Chinese is default; switching preserves the form and administrator session
   await expect(page).toHaveTitle("TGFlow");
   await expect(page.getByText("管理员登录", { exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  expect(
+    await page
+      .getByLabel("用户名", { exact: true })
+      .evaluate((element) => (element as HTMLInputElement).validationMessage),
+  ).toBe("此项为必填项");
   await page.getByLabel("用户名", { exact: true }).fill("admin");
   await page
     .getByLabel("密码", { exact: true })

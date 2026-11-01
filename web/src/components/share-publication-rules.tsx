@@ -293,8 +293,11 @@ function RuleRow({ rule, index }: { rule: SharePolicyRule; index: number }) {
 
 function describeMatch(match: SharePolicyRule["match"]): string[] {
   const conditions = [
-    ...(match.fileTypes?.map((value) => `type: ${t(value)}`) ?? []),
-    ...(match.mimeTypes?.map((value) => `mime: ${t(value)}`) ?? []),
+    ...(match.fileTypes?.map((value) =>
+      t("File type: {type}", { type: t(value) }),
+    ) ?? []),
+    ...(match.mimeTypes?.map((value) => t("MIME: {type}", { type: value })) ??
+      []),
     ...(match.mimeTypePrefixes?.map((value) =>
       t("mime starts {value}", { value }),
     ) ?? []),

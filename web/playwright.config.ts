@@ -14,7 +14,8 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000",
+    // Probe a static asset; page rendering is verified by the tests themselves.
+    url: "http://localhost:3000/favicon.svg",
     timeout: 180_000,
     reuseExistingServer: !process.env.CI,
   },
