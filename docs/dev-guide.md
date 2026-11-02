@@ -83,6 +83,27 @@ docker compose -p tgflow-dev logs -f tgflow
 
 本版本不会批量重命名或迁移历史已完成文件，原有效路径继续可用；新完成的下载才进入新的原名目录。正在下载的旧任务及旧文件的处理应先在独立备份上验证。直接切回旧镜像不能保证旧版理解 dev 的文件路径；回退应恢复对应镜像与匹配的数据备份。开发和发布本身不操作 NAS 上的现有容器。
 
+## HTTPS 反向代理
+
+容器入口为 HTTP `80`，Compose 默认发布主机 `6543`。外层 Lucky 等反代接收 HTTPS，再转发到 `http://NAS地址:6543`；同网络容器间可转发到 `http://tgflow:80`。Java 的 `8080` 是内部 API，不用作完整 WebUI 的反代入口。
+
+例如浏览器访问 `https://tgflow.example.com:6270`，`.env` 应设置：
+
+```dotenv
+HTTP_SECURE_COOKIES=true
+HTTP_ALLOWED_ORIGINS=https://tgflow.example.com:6270
+```
+
+将域名换成自己的实际地址。来源必须匹配协议、域名及非默认端口，不带页面路径。外层反代保留浏览器的 Host（含端口），覆盖设置 `X-Forwarded-Proto` 为实际协议，并启用 WebSocket。应用端口使用 HTTP；`HTTP_SECURE_COOKIES=true` 本身不会启用容器 TLS。
+
+容器 Nginx 会保留有效的外层 `http`／`https` 标记，未提供或无效值才回退到自身协议。API 与 WebSocket 使用一致逻辑，避免外层 HTTPS 在容器内被改写成 HTTP。
+
+修改部署目录的 `.env` 后，用 `docker compose -p tgflow-dev up -d` 重建服务应用环境变量，单纯重启不能更新环境变量。启用 Secure Cookie 后统一通过 HTTPS 域名登录；HTTP IP 直连不能携带安全会话 Cookie。
+
+“能打开页面但输入账号密码报错”时，查看 API 的错误码：`ORIGIN_NOT_ALLOWED` 表示访问来源校验失败，尚未进入密码校验；`AUTHENTICATION_REQUIRED` 表示没有有效会话。不要为解决域名来源错误而关闭 Secure Cookie。原有其他服务或 NAS 反代规则不需要随本项目开发而自动改动。
+
+CI 会用同一个构建镜像再启动 HTTPS 外层代理和独立测试实例，验证 Secure Cookie 下的初始化、账号密码登录、会话、退出、CSRF、外部端口保留和 WSS 握手，并检查其他来源被拒绝。
+
 ## 自动化怎么配置
 
 原项目的自动化按聊天配置，包含三个独立开关：

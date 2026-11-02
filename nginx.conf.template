@@ -8,6 +8,14 @@ events {
 }
 # 定义 HTTP 块
 http {
+    # TLS may terminate at the outer reverse proxy. Preserve its protocol, while
+    # falling back to the local scheme for absent or invalid header values.
+    map $http_x_forwarded_proto $tgflow_forwarded_proto {
+        default $scheme;
+        http http;
+        https https;
+    }
+
     # 定义 server 块
     server {
         listen ${NGINX_PORT};
@@ -23,21 +31,21 @@ http {
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
+            proxy_set_header Host $http_host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Proto $tgflow_forwarded_proto;
         }
 
         # 定义 API 的代理规则
         location /api/ {
             proxy_pass http://localhost:8080/;
-            proxy_set_header Host $host;
+            proxy_set_header Host $http_host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Proto $tgflow_forwarded_proto;
         }
 
         location / {

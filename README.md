@@ -59,15 +59,19 @@ Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例�
 
 ### HTTP 与 HTTPS 登录
 
-Compose 中保留：
+局域网 HTTP 在 `.env` 中使用：
 
 ```yaml
-HTTP_SECURE_COOKIES: "false"
+HTTP_SECURE_COOKIES=false
 ```
 
 这适用于受信任局域网内的 **HTTP**。HTTP 无法发送 Secure Cookie，错误开启会导致登录后仍提示 `Authentication is required`。
 
-对外访问请使用 HTTPS，将 Compose 中该项改为 `"true"`，把 `HTTP_ALLOWED_ORIGINS` 设为实际的 `https://域名`，并确保反向代理正确传递 `X-Real-IP`、`X-Forwarded-Host`、`X-Forwarded-Proto`。不要把 HTTP 下的 Cookie 配置直接用于公网部署。
+HTTPS 域名访问时，在 `.env` 设置 `HTTP_SECURE_COOKIES=true`，把 `HTTP_ALLOWED_ORIGINS` 设为完整来源。非默认端口必须包含在来源中，例如 `https://tgflow.example.com:6270`。这项开关只控制 Cookie 的 Secure 属性，不会给容器启用 HTTPS 监听。
+
+容器入口是 **HTTP 80**，默认宿主机映射 **6543 → 80**。Lucky 等外层反代负责 HTTPS，目标填写 `http://NAS地址:6543`；同一个 Docker 网络中可使用 `http://tgflow:80`。保留原始 Host（含外部端口）、设置 `X-Forwarded-Proto: https`，并开启 WebSocket 转发。容器 Nginx 对 API 和 WebSocket 保留有效的外层协议标记；外层代理须覆盖客户端传入的转发头。
+
+若页面能打开而登录返回 `ORIGIN_NOT_ALLOWED`，先核对来源的协议、域名、端口，不能只改 Cookie 开关。启用 Secure Cookie 后应通过 HTTPS 域名登录；HTTP IP 直连无法使用同一个安全 Cookie 会话。详见 [反向代理配置](docs/dev-guide.md#https-反向代理)。
 
 ### 环境变量
 
@@ -80,12 +84,13 @@ HTTP_SECURE_COOKIES: "false"
 | `CONFIG_DIR` | 应用状态目录，示例 `./config`，建议 SSD |
 | `DOWNLOAD_DIR` | 下载暂存与完成文件目录，默认 `./downloads`，建议 HDD |
 | `DATA_DIR` | 兼容旧配置；未设置 CONFIG_DIR 时作为应用状态目录 |
-| `HTTP_ALLOWED_ORIGINS` | 实际访问来源，多个值用逗号分隔 |
+| `HTTP_ALLOWED_ORIGINS` | 完整访问来源，包含协议和非默认端口，多个值用逗号分隔 |
+| `HTTP_SECURE_COOKIES` | HTTP 设为 `false`，HTTPS 域名访问设为 `true`，默认 `false` |
 | `LOG_LEVEL` | 默认 `INFO` |
 | `TELEGRAM_LOG_LEVEL` | 默认 `0` |
 | `PUID` / `PGID` | 可选，挂载目录对应的用户和组 ID，默认 `0` |
 
-Compose 还固定配置 `TZ=Asia/Shanghai`、`APP_ENV=prod`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`DB_TYPE=sqlite`、`SHARE_ENABLED=false`。`HTTP_SECURE_COOKIES` 在 Compose 中按访问协议配置。
+Compose 还固定配置 `TZ=Asia/Shanghai`、`APP_ENV=prod`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`DB_TYPE=sqlite`、`SHARE_ENABLED=false`。`HTTP_SECURE_COOKIES` 从 `.env` 读取。
 
 上游仍支持外部数据库（`DB_TYPE`、`DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`）以及可选分享和 AI 配置；精简示例不会自动启用这些功能。完整运行参数以 `api/src/main/java/telegram/files/Config.java` 及 `share/ShareConfiguration.java` 为准。
 

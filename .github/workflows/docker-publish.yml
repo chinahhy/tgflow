@@ -61,6 +61,27 @@ jobs:
           curl --fail --silent http://127.0.0.1:6543/ | grep -q TGFlow
           curl --fail --silent http://127.0.0.1:6543/api/auth/bootstrap/status | grep -q true
           docker exec tgflow-smoke sh -c 'test -f /app/data/data.db && test -d /downloads'
+      - name: Test HTTPS reverse proxy and Secure cookies
+        run: |
+          mkdir -p "$RUNNER_TEMP/tgflow-proxy-tls"
+          openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 1 \
+            -subj '/CN=tgflow-proxy-test' -addext 'subjectAltName=IP:127.0.0.1' \
+            -keyout "$RUNNER_TEMP/tgflow-proxy-tls/key.pem" \
+            -out "$RUNNER_TEMP/tgflow-proxy-tls/cert.pem" > /dev/null 2>&1
+          docker run -d --name tgflow-secure \
+            -e APP_ENV=prod -e APP_ROOT=/app/data -e DOWNLOAD_ROOT=/downloads \
+            -e TELEGRAM_API_ID=1 -e TELEGRAM_API_HASH=test-only-placeholder \
+            -e HTTP_SECURE_COOKIES=true -e SHARE_ENABLED=false \
+            -p 127.0.0.1:6544:80 tgflow:ci
+          docker run -d --name tgflow-https-proxy --network host --entrypoint nginx \
+            -v "$GITHUB_WORKSPACE/.github/fixtures/https-proxy.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$RUNNER_TEMP/tgflow-proxy-tls:/test-tls:ro" \
+            tgflow:ci -g 'daemon off;'
+          if ! python3 scripts/test-https-proxy.py --container tgflow-secure \
+            --ca-file "$RUNNER_TEMP/tgflow-proxy-tls/cert.pem"; then
+            docker logs tgflow-https-proxy
+            exit 1
+          fi
       - name: Determine branch tag and Docker Hub readiness
         id: release
         env:
@@ -97,4 +118,4 @@ jobs:
           echo "Published: $image" >> "$GITHUB_STEP_SUMMARY"
       - name: Remove smoke-test container
         if: always()
-        run: docker rm -f tgflow-smoke || true
+        run: docker rm -f tgflow-smoke tgflow-secure tgflow-https-proxy || true
