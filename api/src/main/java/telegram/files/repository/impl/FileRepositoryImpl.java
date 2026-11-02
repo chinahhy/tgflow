@@ -18,6 +18,8 @@ import io.vertx.sqlclient.templates.SqlTemplate;
 import org.jooq.lambda.tuple.Tuple;
 import org.jooq.lambda.tuple.Tuple3;
 import telegram.files.Config;
+import telegram.files.DownloadFailures;
+import telegram.files.FileSearchFilter;
 import telegram.files.MessyUtils;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.FileRepository;
@@ -99,7 +101,10 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
 
         String whereClause = "type != 'thumbnail'";
         Map<String, Object> params = new HashMap<>();
-        params.put("limit", limit);
+        params.put("limit", Math.max(1, Math.min(limit, 100)));
+        if (Convert.toBool(filter.get("taskOnly"), false)) {
+            whereClause += " AND download_status IN ('downloading','paused','completed','error')";
+        }
         if (chatId != 0) {
             whereClause += " AND chat_id = #{chatId}";
             params.put("chatId", chatId);
@@ -163,15 +168,21 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 params.put("endTime", endTime);
             }
         }
-        if (StrUtil.isNotBlank(sizeRange) && StrUtil.isNotBlank(sizeUnit)) {
-            String[] sizes = sizeRange.split(",");
-            if (sizes.length == 2) {
-                long minSize = MessyUtils.convertToByte(Convert.toLong(sizes[0]), sizeUnit);
-                long maxSize = MessyUtils.convertToByte(Convert.toLong(sizes[1]), sizeUnit);
-                whereClause += " AND size >= #{minSize} AND size <= #{maxSize}";
-                params.put("minSize", minSize);
-                params.put("maxSize", maxSize);
+        long[] byteRange = FileSearchFilter.sizeRange(filter);
+        if (StrUtil.isNotBlank(sizeRange)) {
+            whereClause += " AND size >= #{minSize} AND size <= #{maxSize}";
+            params.put("minSize", byteRange[0]);
+            params.put("maxSize", byteRange[1]);
+        }
+        List<String> extensions = FileSearchFilter.extensions(filter.get("extensions"));
+        if (!extensions.isEmpty()) {
+            List<String> clauses = new java.util.ArrayList<>();
+            for (int index = 0; index < extensions.size(); index++) {
+                String key = "extension" + index;
+                clauses.add("LOWER(file_name) LIKE #{" + key + "} ESCAPE '!'");
+                params.put(key, "%." + extensions.get(index).replace("_", "!_"));
             }
+            whereClause += " AND (" + String.join(" OR ", clauses) + ")";
         }
         String orderBy = "message_id DESC";
         boolean customSort = StrUtil.isNotBlank(sort) && StrUtil.isNotBlank(order)
@@ -371,6 +382,8 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 .forQuery(sqlClient, """
                         SELECT COUNT(CASE WHEN download_status = 'downloading' THEN 1 END)                  AS downloading,
                                COUNT(CASE WHEN download_status = 'completed' THEN 1 END)                    AS completed,
+                               COUNT(CASE WHEN download_status = 'paused' THEN 1 END) AS paused,
+                               COUNT(CASE WHEN download_status = 'error' THEN 1 END) AS error,
                                SUM(CASE WHEN download_status = 'completed' THEN size ELSE 0 END)            AS downloaded_size
                         FROM file_record
                         WHERE type != 'thumbnail'
@@ -379,6 +392,8 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                     JsonObject result = JsonObject.of();
                     result.put("downloading", row.getInteger("downloading"));
                     result.put("completed", row.getInteger("completed"));
+                    result.put("paused", row.getInteger("paused"));
+                    result.put("error", row.getInteger("error"));
                     result.put("downloadedSize", Objects.requireNonNullElse(row.getLong("downloaded_size"), 0));
                     return result;
                 })
@@ -757,6 +772,6 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 .execute(Map.of("uniqueId", uniqueId))
                 .onFailure(err -> log.error("Failed to delete file record: %s".formatted(err.getMessage()))
                 )
-                .mapEmpty();
+                .compose(_ -> DownloadFailures.clear(uniqueId));
     }
 }

@@ -112,7 +112,9 @@ function SettingRow({
   );
 }
 
-export default function SettingsForm() {
+export default function SettingsForm({
+  inline = false,
+}: { inline?: boolean } = {}) {
   useLocale();
   const { settings, setSetting, updateSettings } = useSettings();
   const { account } = useTelegramAccount();
@@ -163,7 +165,9 @@ export default function SettingsForm() {
   return (
     <form
       onSubmit={handleSave}
-      className="flex h-full flex-col overflow-hidden"
+      className={
+        inline ? "flex flex-col" : "flex h-full flex-col overflow-hidden"
+      }
     >
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
         <div className="flex items-start gap-3 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
@@ -479,11 +483,17 @@ export default function SettingsForm() {
         </SettingsSection>
       </div>
       <DialogFooter className="mt-3 gap-2 border-t bg-background pt-3">
-        <DialogClose asChild>
-          <Button className="w-full md:w-auto" variant="outline" type="button">
-            {t("Cancel")}
-          </Button>
-        </DialogClose>
+        {!inline && (
+          <DialogClose asChild>
+            <Button
+              className="w-full md:w-auto"
+              variant="outline"
+              type="button"
+            >
+              {t("Cancel")}
+            </Button>
+          </DialogClose>
+        )}
         <Button className="w-full md:w-auto" type="submit">
           {t("Save settings")}
         </Button>

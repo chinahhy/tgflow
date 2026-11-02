@@ -148,6 +148,7 @@ export function FileTable({
     isLoading,
     size,
     files,
+    hasMore,
     handleLoadMore,
     loadedCount,
     totalCount,
@@ -183,6 +184,7 @@ export function FileTable({
   }, [rowHeight, rowVirtual]);
 
   const maybeLoadMore = useCallback(() => {
+    if (files.length === 0) return;
     const element = tableParentRef.current;
     if (!element) {
       return;
@@ -194,7 +196,7 @@ export function FileTable({
     if (distanceFromBottom <= preloadDistance) {
       void handleLoadMore();
     }
-  }, [handleLoadMore, rowHeight]);
+  }, [files.length, handleLoadMore, rowHeight]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(maybeLoadMore);
@@ -427,7 +429,22 @@ export function FileTable({
                   );
                 })}
             </div>
-            {!isLoading && files.length === 0 && <FileNotFount />}
+            {!isLoading &&
+              files.length === 0 &&
+              (hasMore ? (
+                <div className="flex flex-col items-center gap-4 p-8 text-center">
+                  <p className="text-muted-foreground">
+                    {t(
+                      "No matches in this batch. Continue searching older messages.",
+                    )}
+                  </p>
+                  <Button onClick={() => void handleLoadMore()}>
+                    {t("Load more")}
+                  </Button>
+                </div>
+              ) : (
+                <FileNotFount />
+              ))}
           </div>
         </div>
       </div>

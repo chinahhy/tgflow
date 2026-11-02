@@ -18,5 +18,10 @@ export function useSharePublicationPolicy() {
     },
   );
 
-  return shareEnabled ? (data ?? DEFAULT_SHARE_PUBLICATION_POLICY) : DEFAULT_SHARE_PUBLICATION_POLICY;
+  return shareEnabled &&
+    data &&
+    Array.isArray(data.shareRules) &&
+    Array.isArray(data.categories)
+    ? data
+    : DEFAULT_SHARE_PUBLICATION_POLICY;
 }

@@ -166,3 +166,26 @@
             env(safe-area-inset-bottom, 0px)
     );
 }
+
+/* Shared dev application shell: light surfaces, slate typography, blue navigation. */
+.tgflow-shell {
+  --foreground: 222 47% 11%;
+  --muted-foreground: 215 16% 47%;
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --input: 214 32% 88%;
+  --ring: 221 83% 53%;
+  --sidebar: 210 40% 98%;
+}
+.dark .tgflow-shell {
+  --foreground: 210 40% 98%;
+  --muted-foreground: 215 20% 65%;
+  --primary: 217 91% 65%;
+  --primary-foreground: 222 47% 11%;
+  --border: 217 20% 22%;
+  --input: 217 20% 28%;
+  --sidebar: 222 25% 9%;
+}
+.tgflow-cover img { width: 100%; height: 100%; object-fit: cover; }
+.tgflow-cover > div, .tgflow-cover > div > div { width: 100%; height: 100%; }

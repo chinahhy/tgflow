@@ -28,7 +28,7 @@ public class FileRecordRetriever {
             });
         }
         return DataVerticle.fileRepository.getFiles(chatId, filter)
-                .compose(r -> getTdMessages(r.v1).map(r::concat))
+                .compose(r -> getTdMessages(r.v1).recover(_ -> Future.succeededFuture(Collections.emptyMap())).map(r::concat))
                 .compose(r -> getThumbnails(r.v1).map(r::concat))
                 .compose(r -> {
                     Map<String, TdApi.Message> messageMap = r.v4;

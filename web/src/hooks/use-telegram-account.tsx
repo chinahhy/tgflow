@@ -76,7 +76,7 @@ export const TelegramAccountProvider: React.FC<
     if (!account) return;
     setAccountId(newAccountId);
     if (account.status === "active") {
-      router.push(`/accounts?id=${newAccountId}`);
+      router.push(`/chats?id=${newAccountId}`);
     }
   };
 

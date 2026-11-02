@@ -60,7 +60,13 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
       {selectedChat ? (
         <div className="flex min-w-0 items-center gap-2">
           <Avatar className="size-6">
-            <AvatarImage src={`data:image/png;base64,${selectedChat.avatar}`} />
+            <AvatarImage
+              src={
+                selectedChat.avatar
+                  ? `data:image/png;base64,${selectedChat.avatar}`
+                  : undefined
+              }
+            />
             <AvatarFallback>
               {selectedChat.name?.[0] ?? selectedChat.id[0]}
             </AvatarFallback>
@@ -138,7 +144,13 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
                   )}
                 />
                 <Avatar className="size-7 shrink-0">
-                  <AvatarImage src={`data:image/png;base64,${chat.avatar}`} />
+                  <AvatarImage
+                    src={
+                      chat.avatar
+                        ? `data:image/png;base64,${chat.avatar}`
+                        : undefined
+                    }
+                  />
                   <AvatarFallback>
                     {chat.name?.[0] ?? chat.id[0]}
                   </AvatarFallback>

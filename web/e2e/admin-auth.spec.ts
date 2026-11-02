@@ -73,6 +73,14 @@ async function installApi(
       });
       return;
     }
+    if (path === "/files") {
+      await json(route, 200, { files: [], count: 0, nextFromMessageId: 0 });
+      return;
+    }
+    if (path === "/settings") {
+      await json(route, 200, { shareEnabled: "false", tags: "" });
+      return;
+    }
     await json(route, 404, { error: { code: "NOT_FOUND", message: path } });
   });
 }
@@ -93,17 +101,13 @@ test("keeps private UI unmounted until login and sends CSRF on logout", async ({
   await expect(
     page.getByText("Administrator sign in", { exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "No Accounts Found" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Overview" })).toHaveCount(0);
 
   await page.getByLabel("Username").fill("admin");
   await page.getByLabel("Password").fill("correct-horse-battery-staple");
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await expect(
-    page.getByRole("heading", { name: "No Accounts Found" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   const logoutButton = page.getByRole("button", {
     name: "Log out",
     exact: true,
@@ -131,7 +135,5 @@ test("supports the local-network first-administrator bootstrap flow", async ({
   await page.getByLabel("Password").fill("correct-horse-battery-staple");
   await page.getByRole("button", { name: "Create administrator" }).click();
 
-  await expect(
-    page.getByRole("heading", { name: "No Accounts Found" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 });

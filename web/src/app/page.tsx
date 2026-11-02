@@ -1,17 +1,4 @@
-"use client";
-
-import { EmptyState } from "@/components/empty-state";
-import { useTelegramAccount } from "@/hooks/use-telegram-account";
-
+import { Dashboard } from "@/components/dashboard";
 export default function Home() {
-  const { getAccounts, handleAccountChange, isLoading } = useTelegramAccount();
-  const accounts = getAccounts();
-  return (
-    <EmptyState
-      isLoadingAccount={isLoading}
-      hasAccounts={(accounts ?? []).length > 0}
-      accounts={accounts}
-      onSelectAccount={handleAccountChange}
-    />
-  );
+  return <Dashboard />;
 }

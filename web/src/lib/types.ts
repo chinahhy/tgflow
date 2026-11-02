@@ -62,6 +62,9 @@ export type TelegramFile = {
   extra?: PhotoExtra | VideoExtra;
   tags?: string;
   loaded: boolean;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  errorAt?: number | null;
   threadChatId: number;
   messageThreadId: number;
   hasReply?: boolean;
@@ -149,6 +152,7 @@ export type TDFile = {
 export type SortFields = "date" | "completion_date" | "size" | "reaction_count";
 
 export type FileFilter = {
+  extensions?: string;
   search: string;
   type: FileType | "all";
   downloadStatus?: DownloadStatus;
@@ -239,6 +243,9 @@ export type AutoTransferRule = {
 };
 
 export type AutoDownloadRule = {
+  minSize?: number;
+  maxSize?: number;
+  extensions?: string[];
   query: string;
   fileTypes: Array<Exclude<FileType, "media">>;
   downloadHistory: boolean;

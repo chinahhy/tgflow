@@ -69,6 +69,14 @@ public class AutomationsHolder {
             } else {
                 // update fields
                 SettingAutoRecords.Automation theAutomation = AUTO_RECORDS.getItem(automation.telegramId, automation.chatId);
+                if (automation.download.enabled && automation.download.rule != null
+                        && automation.download.rule.downloadHistory
+                        && (!theAutomation.download.enabled || !Json.encode(theAutomation.download.rule).equals(Json.encode(automation.download.rule)))) {
+                    theAutomation.state &= ~((1 << SettingAutoRecords.HISTORY_DOWNLOAD_STATE)
+                            | (1 << SettingAutoRecords.HISTORY_DOWNLOAD_SCAN_STATE));
+                    theAutomation.download.nextFileType = null;
+                    theAutomation.download.nextFromMessageId = 0;
+                }
                 theAutomation.preload.with(automation.preload);
                 theAutomation.download.with(automation.download);
                 theAutomation.transfer.with(automation.transfer);

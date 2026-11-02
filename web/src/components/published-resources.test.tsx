@@ -25,6 +25,10 @@ vi.mock("@/hooks/use-toast", () => ({
   toast: vi.fn(),
 }));
 
+vi.mock("@/hooks/use-share-enabled", () => ({
+  useShareEnabled: () => true,
+}));
+
 const requestMock = vi.mocked(request);
 
 describe("EditPublishedResourceDialog", () => {

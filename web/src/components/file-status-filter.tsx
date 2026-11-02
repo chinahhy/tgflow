@@ -31,6 +31,7 @@ const statusOptions = {
 };
 
 interface FileStatusFilterProps {
+  downloadLocked?: boolean;
   downloadStatus: DownloadStatus | undefined;
   transferStatus: TransferStatus | undefined;
   onChange: (
@@ -40,6 +41,7 @@ interface FileStatusFilterProps {
 }
 
 export default function FileStatusFilter({
+  downloadLocked = false,
   downloadStatus,
   transferStatus,
   onChange,
@@ -117,6 +119,7 @@ export default function FileStatusFilter({
               <SelectLabel>{t(group.text)}</SelectLabel>
               {Object.entries(group.status).map(([statusKey, item]) => (
                 <SelectPrimitive.Item
+                  disabled={downloadLocked && groupKey === "downloadStatus"}
                   key={`${groupKey}||${statusKey}`}
                   value={`${groupKey}||${statusKey}`}
                   className={cn(

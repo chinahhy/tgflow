@@ -10,7 +10,8 @@ function getCachedShareEnabled(): boolean | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (raw !== null) {
-      return Boolean(JSON.parse(raw));
+      const value: unknown = JSON.parse(raw);
+      return value === true || value === "true";
     }
   } catch {}
   return null;
@@ -22,8 +23,9 @@ export function useShareEnabled(): boolean {
   const hasServerSetting = Boolean(
     context?.settings && "shareEnabled" in context.settings,
   );
+  const rawValue: unknown = context?.settings?.shareEnabled;
   const serverValue = hasServerSetting
-    ? Boolean(context?.settings?.shareEnabled)
+    ? rawValue === true || rawValue === "true"
     : null;
 
   useEffect(() => {
@@ -47,5 +49,5 @@ export function useShareEnabled(): boolean {
     return cached;
   }
 
-  return true;
+  return false;
 }

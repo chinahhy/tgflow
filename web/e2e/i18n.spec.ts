@@ -117,15 +117,13 @@ test("Chinese is default; switching preserves the form and administrator session
   expect(writes()).toBe(0);
   await screenshot(page, "tgflow-en-desktop.png");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "No Accounts Found" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   const beforeSwitch = writes();
   await page.getByRole("button", { name: "Switch language" }).click();
-  await expect(page.getByRole("heading", { name: "未找到账号" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "概览" })).toBeVisible();
   expect(writes()).toBe(beforeSwitch);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "未找到账号" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "概览" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
   expect(pageErrors).toEqual([]);
 });
@@ -147,13 +145,9 @@ test("mobile bootstrap translates and fits the viewport", async ({ page }) => {
   ).toBe(true);
   await screenshot(page, "tgflow-zh-mobile.png");
   await page.getByRole("button", { name: "创建管理员", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "未找到账号" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "概览" })).toBeVisible();
   await page.getByRole("button", { name: "切换语言" }).click();
-  await expect(
-    page.getByRole("heading", { name: "No Accounts Found" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await page.reload();
-  await expect(
-    page.getByRole("heading", { name: "No Accounts Found" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 });

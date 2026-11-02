@@ -630,11 +630,13 @@ export default function FileControl({
     return (
       <TooltipProvider>
         {actionButtons}
-        <ShareResourceDialog
-          file={file}
-          open={shareOpen}
-          onOpenChange={setShareOpen}
-        />
+        {shareEnabled && shareOpen && (
+          <ShareResourceDialog
+            file={file}
+            open={shareOpen}
+            onOpenChange={setShareOpen}
+          />
+        )}
         <EditPublishedResourceDialog
           source={editMetadataOpen ? publishedSource : null}
           onOpenChange={(open) => {
@@ -692,11 +694,13 @@ export default function FileControl({
           )}
         </AnimatePresence>
       </div>
-      <ShareResourceDialog
-        file={file}
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-      />
+      {shareEnabled && shareOpen && (
+        <ShareResourceDialog
+          file={file}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+        />
+      )}
       <EditPublishedResourceDialog
         source={editMetadataOpen ? publishedSource : null}
         onOpenChange={(open) => {

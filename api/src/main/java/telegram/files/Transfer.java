@@ -160,7 +160,7 @@ public abstract class Transfer {
      * a path that already includes a file name); in that case the caption is not appended.
      */
     protected String buildFileName(FileRecord fileRecord) {
-        String originalName = FileUtil.getName(fileRecord.localPath());
+        String originalName = DownloadStorage.safeFileName(fileRecord.fileName(), FileUtil.getName(fileRecord.localPath()));
         if (!useCaptionName || StrUtil.isBlank(fileRecord.caption())) {
             return originalName;
         }

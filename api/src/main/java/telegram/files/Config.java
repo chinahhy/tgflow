@@ -54,6 +54,9 @@ public class Config {
 
     public static final String TELEGRAM_ROOT = APP_ROOT + File.separator + "account";
 
+    public static final String DOWNLOAD_ROOT = StrUtil.blankToDefault(System.getenv("DOWNLOAD_ROOT"),
+            APP_ROOT + File.separator + "downloads");
+
     public static final int TELEGRAM_API_ID = Convert.toInt(System.getenv("TELEGRAM_API_ID"), 0);
 
     public static final String TELEGRAM_API_HASH = System.getenv("TELEGRAM_API_HASH");
@@ -144,6 +147,7 @@ public class Config {
         if (!FileUtil.exist(LOG_PATH)) {
             FileUtil.mkdir(LOG_PATH);
         }
+        FileUtil.mkdir(DOWNLOAD_ROOT);
 
         initLogger();
     }

@@ -32,7 +32,13 @@ export default function AccountSelect({
           {account ? (
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
-                <AvatarImage src={`data:image/png;base64,${account.avatar}`} />
+                <AvatarImage
+                  src={
+                    account.avatar
+                      ? `data:image/png;base64,${account.avatar}`
+                      : undefined
+                  }
+                />
                 <AvatarFallback>{account.name[0]}</AvatarFallback>
               </Avatar>
               <span className="max-w-[170px] overflow-hidden truncate">
@@ -54,7 +60,13 @@ export default function AccountSelect({
           <SelectItem key={account.id} value={account.id}>
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
-                <AvatarImage src={`data:image/png;base64,${account.avatar}`} />
+                <AvatarImage
+                  src={
+                    account.avatar
+                      ? `data:image/png;base64,${account.avatar}`
+                      : undefined
+                  }
+                />
                 <AvatarFallback>{account.name[0]}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">

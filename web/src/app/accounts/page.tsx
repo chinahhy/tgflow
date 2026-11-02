@@ -1,45 +1,45 @@
 "use client";
-import { t } from "@/lib/i18n";
-import { useLocale } from "@/hooks/use-locale";
-
-import { Header } from "@/components/header";
-import { EmptyState } from "@/components/empty-state";
 import { useSearchParams } from "next/navigation";
-import Files from "@/components/files";
-import useIsMobile from "@/hooks/use-is-mobile";
-import { MobileHeader } from "@/components/mobile/mobile-header";
-import React from "react";
-import ParseLinkButton from "@/components/parse-link";
+import { ChatWorkspace } from "@/components/chat-workspace";
+import { AccountList } from "@/components/account-list";
+import { AccountDialog } from "@/components/account-dialog";
+import { Button } from "@/components/ui/button";
+import { PageHeading } from "@/components/app-shell";
+import { useTelegramAccount } from "@/hooks/use-telegram-account";
+import { useLocale } from "@/hooks/use-locale";
+import { t } from "@/lib/i18n";
+import { Plus } from "lucide-react";
 
-export default function AccountPage() {
+export default function AccountsPage() {
   useLocale();
-  const isMobile = useIsMobile();
-  const searchParams = useSearchParams();
-  const accountId = searchParams.get("id");
-  const chatId = searchParams.get("chatId");
-  const messageThreadId = searchParams.get("messageThreadId")
-    ? Number(searchParams.get("messageThreadId"))
-    : undefined;
-  const link = searchParams.get("link") ?? undefined;
-
+  const params = useSearchParams();
+  const { getAccounts, handleAccountChange, isLoading } = useTelegramAccount();
+  if (params.has("id")) return <ChatWorkspace />;
+  const accounts = getAccounts();
   return (
-    <div className="container mx-auto px-4 py-6">
-      {isMobile ? <MobileHeader /> : <Header />}
-      {(accountId && chatId) || (accountId && link) ? (
-        <Files
-          accountId={accountId}
-          chatId={chatId ?? "-1"}
-          messageThreadId={messageThreadId}
-          link={link}
+    <div>
+      <PageHeading
+        title={t("Account management")}
+        description={t("Manage Telegram accounts and their connections.")}
+      >
+        <AccountDialog isAdd>
+          <Button>
+            <Plus data-icon="inline-start" />
+            {t("Add account")}
+          </Button>
+        </AccountDialog>
+      </PageHeading>
+      {isLoading ? (
+        <p className="text-muted-foreground">{t("Loading...")}</p>
+      ) : accounts.length ? (
+        <AccountList
+          accounts={accounts}
+          onSelectAccount={handleAccountChange}
         />
       ) : (
-        <div className="flex min-h-[60vh] flex-col items-center justify-center">
-          <EmptyState
-            hasAccounts={true}
-            message={t("Select a chat to view files")}
-          />
-          {accountId && <ParseLinkButton accountId={accountId} />}
-        </div>
+        <p className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+          {t("Add a Telegram account to start browsing files.")}
+        </p>
       )}
     </div>
   );

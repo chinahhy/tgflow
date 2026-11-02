@@ -271,7 +271,7 @@ public class AutoDownloadVerticle extends AbstractVerticle {
                 callback.accept(new ScanResult(nextFileType, nextFromMessageId, true));
             }
         } else {
-            Predicate<TdApi.Message> predicate = MessageFilter.filter(rule.v3);
+            Predicate<TdApi.Message> predicate = message -> AutomationMatcher.matches(message, params.rule);
             DataVerticle.fileRepository.getFilesByUniqueId(TdApiHelp.getFileUniqueIds(Arrays.asList(foundChatMessages.messages)))
                     .onSuccess(existFiles -> {
                         List<TdApi.Message> messages = Stream.of(foundChatMessages.messages)
@@ -307,7 +307,7 @@ public class AutoDownloadVerticle extends AbstractVerticle {
                 query = rule.query;
             }
             if (CollUtil.isNotEmpty(rule.fileTypes)) {
-                fileTypes = rule.fileTypes;
+                fileTypes = AutomationMatcher.fileTypes(rule);
             }
             if (StrUtil.isNotBlank(rule.filterExpr)) {
                 filterExpr = rule.filterExpr;
@@ -404,6 +404,9 @@ public class AutoDownloadVerticle extends AbstractVerticle {
                 .toList();
         downloadMessages.forEach(messageWrapper -> {
             TdApi.Message message = messageWrapper.message;
+            var automation = autoRecords.getItem(telegramId, message.chatId);
+            // Comment-file scans originate from the configured channel, not the discussion chat.
+            if (automation != null && (!automation.download.enabled || !AutomationMatcher.matches(message, automation.download.rule))) return;
             Integer fileId = TdApiHelp.getFileId(message);
             log.debug("Start download file: %s".formatted(fileId));
             telegramVerticle.startDownload(message.chatId, message.id, fileId)
@@ -430,14 +433,17 @@ public class AutoDownloadVerticle extends AbstractVerticle {
         autoRecords.getDownloadEnabledItems().stream()
                 .filter(item -> item.telegramId == telegramId && item.chatId == chatId)
                 .findFirst()
-                .flatMap(_ -> TelegramVerticles.get(telegramId))
-                .ifPresent(telegramVerticle -> {
+                .ifPresent(automation -> TelegramVerticles.get(telegramId).ifPresent(telegramVerticle -> {
                     if (telegramVerticle.authorized) {
                         telegramVerticle.client.execute(new TdApi.GetMessage(chatId, messageId))
-                                .onSuccess(message -> addWaitingDownloadMessages(telegramId, List.of(message), true, false))
+                                .onSuccess(message -> {
+                                    if (AutomationMatcher.matches(message, automation.download.rule)) {
+                                        addWaitingDownloadMessages(telegramId, List.of(message), true, false);
+                                    }
+                                })
                                 .onFailure(e -> log.error("Auto download fail. Get message failed: %s".formatted(e.getMessage())));
                     }
-                });
+                }));
     }
 
     private static class ScanParams {

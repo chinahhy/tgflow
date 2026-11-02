@@ -60,7 +60,7 @@ export default function ParseLinkButton({ accountId }: ParseLinkButtonProps) {
       });
       // Redirect to the account page with the parsed link
       router.push(
-        `/accounts?id=${accountId}&link=${window.encodeURIComponent(text)}`,
+        `/chats?id=${accountId}&link=${window.encodeURIComponent(text)}`,
       );
     } else {
       toast({

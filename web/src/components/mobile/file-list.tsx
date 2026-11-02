@@ -14,6 +14,7 @@ import FileFilters from "@/components/file-filters";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import FileNotFount from "@/components/file-not-found";
 import { DotmTriangle2 } from "@/components/ui/dotm-triangle-2";
+import { Button } from "@/components/ui/button";
 
 interface FileListProps {
   accountId: string;
@@ -89,6 +90,7 @@ export default function FileList({ accountId, chatId, link }: FileListProps) {
   }, [fileHeightSignature, rowVirtual]);
 
   useEffect(() => {
+    if (files.length === 0) return;
     const [lastItem] = [...rowVirtual.getVirtualItems()].reverse();
     if (!lastItem) {
       return;
@@ -173,7 +175,22 @@ export default function FileList({ accountId, chatId, link }: FileListProps) {
             />
           </div>
         )}
-        {!isLoading && files.length === 0 && <FileNotFount />}
+        {!isLoading &&
+          files.length === 0 &&
+          (hasMore ? (
+            <div className="flex flex-col items-center gap-4 p-6 text-center">
+              <p className="text-muted-foreground">
+                {t(
+                  "No matches in this batch. Continue searching older messages.",
+                )}
+              </p>
+              <Button onClick={() => void handleLoadMore()}>
+                {t("Load more")}
+              </Button>
+            </div>
+          ) : (
+            <FileNotFount />
+          ))}
         {files.length !== 0 &&
           rowVirtual.getVirtualItems().map((virtualRow) => {
             const isLoaderRow = virtualRow.index > files.length - 1;

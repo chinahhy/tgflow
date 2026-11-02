@@ -52,7 +52,9 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
     isLoading,
     mutate,
   } = useSWR<TelegramChat[]>(
-    `/telegram/${accountId}/chats?query=${query}&archived=${archived}&chatId=${chatId ?? ""}`,
+    accountId
+      ? `/telegram/${accountId}/chats?query=${query}&archived=${archived}&chatId=${chatId ?? ""}`
+      : null,
   );
 
   const chat = useMemo(
@@ -69,7 +71,7 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
       toast({ variant: "error", description: t("Failed to switch chat") });
       return;
     }
-    router.push(`/accounts?id=${accountId}&chatId=${newChatId}`);
+    router.push(`/chats?id=${accountId}&chatId=${newChatId}`);
   };
 
   return (

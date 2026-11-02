@@ -95,6 +95,12 @@ public class SettingAutoRecords {
         public boolean downloadCommentFiles;
 
         public String filterExpr;
+
+        public Long minSize;
+
+        public Long maxSize;
+
+        public List<String> extensions;
     }
 
     public static class TransferConfig {

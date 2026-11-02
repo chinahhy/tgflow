@@ -32,6 +32,7 @@ jobs:
           test -s .docker-artifacts/dependencies.txt
           test -s .docker-artifacts/web/index.html
           file tdlib/linux_amd64/libtdjni.so | grep -q 'x86-64'
+          DOCKERHUB_USERNAME=hoya0803 TELEGRAM_API_ID=1 TELEGRAM_API_HASH=test-only-placeholder docker compose config --quiet
       - uses: docker/setup-buildx-action@v3
       - name: Build AMD64 image once
         uses: docker/build-push-action@v6
@@ -46,8 +47,11 @@ jobs:
         run: |
           docker run -d --name tgflow-smoke \
             -e APP_ENV=prod -e APP_ROOT=/app/data \
+            -e DOWNLOAD_ROOT=/downloads \
             -e TELEGRAM_API_ID=1 -e TELEGRAM_API_HASH=test-only-placeholder \
             -e HTTP_SECURE_COOKIES=false -e SHARE_ENABLED=false \
+            -v "$RUNNER_TEMP/tgflow-state:/app/data" \
+            -v "$RUNNER_TEMP/tgflow-downloads:/downloads" \
             -p 127.0.0.1:6543:80 tgflow:ci
           for attempt in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:6543/api/health > /dev/null; then break; fi
@@ -56,6 +60,7 @@ jobs:
           curl --fail --silent http://127.0.0.1:6543/api/health
           curl --fail --silent http://127.0.0.1:6543/ | grep -q TGFlow
           curl --fail --silent http://127.0.0.1:6543/api/auth/bootstrap/status | grep -q true
+          docker exec tgflow-smoke sh -c 'test -f /app/data/data.db && test -d /downloads'
       - name: Determine branch tag and Docker Hub readiness
         id: release
         env:

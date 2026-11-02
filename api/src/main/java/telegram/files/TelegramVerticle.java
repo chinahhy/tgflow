@@ -331,7 +331,9 @@ public class TelegramVerticle extends AbstractVerticle {
             searchChatMessages.filter = TdApiHelp.getSearchMessagesFilter(filter.get("type"));
             searchChatMessages.topicId = messageThreadId > 0 ? new TdApi.MessageTopicThread(messageThreadId) : null;
 
-            return (Objects.equals(filter.get("downloadStatus"), FileRecord.DownloadStatus.idle.name()) ?
+            return (FileSearchFilter.hasMetadataFilter(filter) ?
+                    OnlineFileSearch.search(searchChatMessages, filter, request -> client.execute(request)) :
+                    Objects.equals(filter.get("downloadStatus"), FileRecord.DownloadStatus.idle.name()) ?
                     this.getIdleChatFiles(searchChatMessages, 0) :
                     client.execute(searchChatMessages))
                     .compose(t -> {
@@ -339,7 +341,14 @@ public class TelegramVerticle extends AbstractVerticle {
                                 .onFailure(err -> log.debug("[%s] Preload thumbnails skipped: %s"
                                         .formatted(getRootId(), err.getMessage())));
                         return TelegramConverter.convertFiles(this.telegramRecord.id(), t)
-                                .compose(TelegramConverter::enrichSeedAssociations);
+                                .compose(TelegramConverter::enrichSeedAssociations)
+                                .map(result -> {
+                                    result.put("hasMore", t.nextFromMessageId != 0);
+                                    if (FileSearchFilter.hasMetadataFilter(filter)) {
+                                        result.putNull("count").put("countExact", false);
+                                    }
+                                    return result;
+                                });
                     });
         }
     }
@@ -495,7 +504,8 @@ public class TelegramVerticle extends AbstractVerticle {
                         }
 //                        return Future.failedFuture("Unknown file download status");
                     }
-                    if (dbFileRecord != null && !dbFileRecord.isDownloadStatus(FileRecord.DownloadStatus.idle)) {
+                    if (dbFileRecord != null && !dbFileRecord.isDownloadStatus(FileRecord.DownloadStatus.idle)
+                            && !dbFileRecord.isDownloadStatus(FileRecord.DownloadStatus.error)) {
                         return Future.failedFuture("File is already downloading or completed");
                     }
 
@@ -509,7 +519,12 @@ public class TelegramVerticle extends AbstractVerticle {
                                 }
                                 return Future.succeededFuture();
                             })
+                            .compose(ignore -> DownloadFailures.clear(fileRecord.uniqueId()))
                             .compose(ignore -> client.execute(new TdApi.AddFileToDownloads(fileId, chatId, messageId, 32)))
+                            .compose(ignore -> DataVerticle.fileRepository.updateDownloadStatus(fileId, fileRecord.uniqueId(),
+                                    file.local == null ? null : file.local.path, FileRecord.DownloadStatus.downloading, null))
+                            .recover(error -> persistDownloadFailure(fileRecord, error, "DOWNLOAD_START_FAILED")
+                                    .compose(_ -> Future.failedFuture(error)))
                             .onSuccess(ignore -> {
                                 sendEvent(EventPayload.build(EventPayload.TYPE_FILE_STATUS, new JsonObject()
                                         .put("fileId", fileId)
@@ -667,21 +682,16 @@ public class TelegramVerticle extends AbstractVerticle {
                     if (file.local.isDownloadingCompleted) {
                         return syncFileDownloadStatus(file, null, null).mapEmpty();
                     }
-                    if (isPaused && !file.local.isDownloadingActive) {
-                        return Future.failedFuture("File is not downloading");
-                    }
-                    if (!isPaused && file.local.isDownloadingActive) {
-                        return Future.failedFuture("File is downloading");
-                    }
-                    if (!isPaused && !file.local.canBeDeleted) {
-                        // Maybe the file is not exist, so we need to redownload it
-                        return DataVerticle.fileRepository.getByUniqueId(file.remote.uniqueId)
-                                .compose(fileRecord ->
-                                        client.execute(new TdApi.AddFileToDownloads(fileId, fileRecord.chatId(), fileRecord.messageId(), 32)))
-                                .mapEmpty();
-                    }
-
-                    return client.execute(new TdApi.ToggleDownloadIsPaused(fileId, isPaused));
+                    return DataVerticle.fileRepository.getByUniqueId(file.remote.uniqueId).compose(record -> {
+                        if (record == null) return Future.failedFuture("File not found");
+                        Future<?> action = !isPaused && !file.local.canBeDeleted
+                                ? client.execute(new TdApi.AddFileToDownloads(fileId, record.chatId(), record.messageId(), 32))
+                                : client.execute(new TdApi.ToggleDownloadIsPaused(fileId, isPaused));
+                        return action.compose(_ -> DataVerticle.fileRepository.updateDownloadStatus(file.id,
+                                        file.remote.uniqueId, file.local.path,
+                                        isPaused ? FileRecord.DownloadStatus.paused : FileRecord.DownloadStatus.downloading, null))
+                                .onSuccess(update -> sendFileStatusHttpEvent(file, update)).mapEmpty();
+                    });
                 })
                 .mapEmpty();
     }
@@ -700,13 +710,14 @@ public class TelegramVerticle extends AbstractVerticle {
                         return Future.failedFuture("File not found");
                     }
 
-                    if (fileRecord.isTransferStatus(FileRecord.TransferStatus.completed)) {
+                    if (fileRecord.isTransferStatus(FileRecord.TransferStatus.completed)
+                            || DownloadStorage.configured().isFinalized(fileRecord.localPath())) {
                         if (FileUtil.del(fileRecord.localPath())) {
                             log.debug("[%s] Remove file success: %s".formatted(this.getRootId(), fileRecord.localPath()));
                         }
                     }
 
-                    if (file != null && file.local != null && StrUtil.isNotBlank(file.local.path)) {
+                    if (file != null && file.local != null && StrUtil.isNotBlank(file.local.path) && FileUtil.exist(file.local.path)) {
                         return client.execute(new TdApi.DeleteFile(fileId))
                                 .map(file);
                     } else if (!fileRecord.isTransferStatus(FileRecord.TransferStatus.completed)
@@ -733,6 +744,7 @@ public class TelegramVerticle extends AbstractVerticle {
                         settingAutoRecords = new SettingAutoRecords();
                     }
                     SettingAutoRecords.Automation automation = params.mapTo(SettingAutoRecords.Automation.class);
+                    if (automation.download.enabled) AutomationMatcher.validate(automation.download.rule);
                     boolean hasEnabled = automation.preload.enabled
                                          || automation.download.enabled
                                          || automation.transfer.enabled;
@@ -933,7 +945,10 @@ public class TelegramVerticle extends AbstractVerticle {
                 .put("downloadStatus", fileUpdated.getString("downloadStatus"))
                 .put("localPath", fileUpdated.getString("localPath"))
                 .put("completionDate", fileUpdated.getLong("completionDate"))
-                .put("downloadedSize", file.local.downloadedSize);
+                .put("downloadedSize", file.local == null ? 0 : file.local.downloadedSize)
+                .put("errorCode", fileUpdated.getString("errorCode"))
+                .put("errorMessage", fileUpdated.getString("errorMessage"))
+                .put("errorAt", fileUpdated.getLong("errorAt"));
 
         // 如果文件下载完成，尝试获取并包含缩略图文件信息
         if ("completed".equals(fileUpdated.getString("downloadStatus"))) {
@@ -1208,13 +1223,7 @@ public class TelegramVerticle extends AbstractVerticle {
                                         log.info("[%s] Reconciliation: File completed but not updated in DB: %s".formatted(getRootId(), file.remote.uniqueId));
                                         reconciledCount[0]++;
 
-                                        DataVerticle.fileRepository.updateDownloadStatus(
-                                                file.id,
-                                                file.remote.uniqueId,
-                                                file.local.path,
-                                                FileRecord.DownloadStatus.completed,
-                                                System.currentTimeMillis()
-                                        ).onSuccess(result -> {
+                                        completeDownload(file, fileRecord).onSuccess(result -> {
                                             sendFileStatusHttpEvent(file, result);
                                             log.debug("[%s] Reconciliation fixed file status: %s".formatted(getRootId(), file.remote.uniqueId));
                                         });
@@ -1260,6 +1269,13 @@ public class TelegramVerticle extends AbstractVerticle {
             case TdApi.AuthorizationStateWaitTdlibParameters.CONSTRUCTOR:
                 TdApi.SetTdlibParameters request = new TdApi.SetTdlibParameters();
                 request.databaseDirectory = this.rootPath;
+                try {
+                    request.filesDirectory = DownloadStorage.configured().filesDirectory(this.rootPath).toString();
+                } catch (java.io.IOException failure) {
+                    log.error("Unable to initialize download directory", failure);
+                    readyPromise.tryFail(failure);
+                    return;
+                }
                 request.useMessageDatabase = true;
                 request.useFileDatabase = true;
                 request.useChatInfoDatabase = true;
@@ -1269,7 +1285,7 @@ public class TelegramVerticle extends AbstractVerticle {
                 request.systemLanguageCode = "en";
                 request.deviceModel = "Telegram Files";
                 request.applicationVersion = Start.VERSION;
-                log.trace("[%s] Send SetTdlibParameters: %s".formatted(getRootId(), request));
+                log.trace("[%s] Initialize TDLib database and download directories".formatted(getRootId()));
 
                 tdlibClient.execute(request).onSuccess(this::handleAuthorizationResult);
                 break;
@@ -1393,7 +1409,8 @@ public class TelegramVerticle extends AbstractVerticle {
 
                         if (fileRecord != null) {
                             if (fileRecord.isDownloadStatus(FileRecord.DownloadStatus.completed) &&
-                                fileRecord.isTransferStatus(FileRecord.TransferStatus.completed) &&
+                                (fileRecord.isTransferStatus(FileRecord.TransferStatus.completed)
+                                        || DownloadStorage.configured().isFinalized(fileRecord.localPath())) &&
                                 FileUtil.exist(fileRecord.localPath())) {
                                 return;
                             }
@@ -1406,12 +1423,18 @@ public class TelegramVerticle extends AbstractVerticle {
                                     downloadStatus = FileRecord.DownloadStatus.idle;
                                 }
                             }
-                            DataVerticle.fileRepository.updateDownloadStatus(file.id,
-                                            file.remote.uniqueId,
-                                            finalLocalPath,
-                                            downloadStatus,
-                                            finalCompletionDate)
-                                    .onSuccess(r -> sendFileStatusHttpEvent(file, r));
+                            if (downloadStatus == FileRecord.DownloadStatus.completed) {
+                                completeDownload(file, fileRecord)
+                                        .onSuccess(r -> sendFileStatusHttpEvent(file, r))
+                                        .onFailure(error -> persistDownloadFailure(fileRecord, error, "FILE_STORAGE_FAILED"));
+                            } else {
+                                // A TDLib cache eviction must not erase a published file or a recorded failure.
+                                if (fileRecord.isDownloadStatus(FileRecord.DownloadStatus.error)) return;
+                                if (fileRecord.isDownloadStatus(FileRecord.DownloadStatus.paused)) return;
+                                DataVerticle.fileRepository.updateDownloadStatus(file.id, file.remote.uniqueId,
+                                                finalLocalPath, downloadStatus, finalCompletionDate)
+                                        .onSuccess(r -> sendFileStatusHttpEvent(file, r));
+                            }
                         }
                     });
 
@@ -1453,13 +1476,7 @@ public class TelegramVerticle extends AbstractVerticle {
                 .getByUniqueId(file.remote.uniqueId)
                 .compose(fileRecord -> {
                     if (fileRecord != null) {
-                        return DataVerticle.fileRepository.updateDownloadStatus(
-                                file.id,
-                                file.remote.uniqueId,
-                                file.local.path,
-                                FileRecord.DownloadStatus.completed,
-                                System.currentTimeMillis()
-                        );
+                        return completeDownload(file, fileRecord);
                     }
 
                     if (message == null) {
@@ -1471,14 +1488,9 @@ public class TelegramVerticle extends AbstractVerticle {
                             .convertFileRecord(telegramRecord.id())
                             .withThreadInfo(messageThreadInfo);
 
+                    FileRecord newRecord = fileRecord;
                     return DataVerticle.fileRepository.create(fileRecord)
-                            .compose(_ -> DataVerticle.fileRepository.updateDownloadStatus(
-                                    file.id,
-                                    file.remote.uniqueId,
-                                    file.local.path,
-                                    FileRecord.DownloadStatus.completed,
-                                    System.currentTimeMillis()
-                            ));
+                            .compose(_ -> completeDownload(file, newRecord));
                 })
                 .compose(r -> {
                     sendFileStatusHttpEvent(file, r);
@@ -1487,4 +1499,33 @@ public class TelegramVerticle extends AbstractVerticle {
                     return Future.succeededFuture();
                 });
     }
+    private Future<JsonObject> completeDownload(TdApi.File file, FileRecord record) {
+        if (record.isDownloadStatus(FileRecord.DownloadStatus.completed)
+                && StrUtil.isNotBlank(record.localPath()) && FileUtil.exist(record.localPath())) {
+            return Future.succeededFuture(new JsonObject());
+        }
+        return vertx.<String>executeBlocking(() -> DownloadStorage.configured().publish(record, file.local.path))
+                .compose(path -> DataVerticle.fileRepository.updateDownloadStatus(file.id, file.remote.uniqueId,
+                        path, FileRecord.DownloadStatus.completed, System.currentTimeMillis()))
+                .compose(update -> DownloadFailures.clear(record.uniqueId()).map(update));
+    }
+
+    private Future<Void> persistDownloadFailure(FileRecord record, Throwable error, String code) {
+        return DownloadFailures.save(record.uniqueId(), code, error)
+                .compose(_ -> DataVerticle.fileRepository.updateDownloadStatus(record.id(), record.uniqueId(),
+                        record.localPath(), FileRecord.DownloadStatus.error, null))
+                .onSuccess(update -> {
+                    JsonObject payload = update == null ? new JsonObject() : update;
+                    payload.put("errorCode", code)
+                            .put("errorMessage", telegram.files.security.SensitiveDataRedactor.redact(error.getMessage()))
+                            .put("errorAt", System.currentTimeMillis());
+                    TdApi.File file = new TdApi.File();
+                    file.id = record.id();
+                    file.remote = new TdApi.RemoteFile();
+                    file.remote.uniqueId = record.uniqueId();
+                    sendFileStatusHttpEvent(file, payload);
+                })
+                .onFailure(failure -> log.error("Unable to persist download failure", failure)).mapEmpty();
+    }
+
 }

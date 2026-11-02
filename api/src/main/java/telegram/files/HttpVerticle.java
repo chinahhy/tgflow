@@ -248,6 +248,10 @@ public class HttpVerticle extends AbstractVerticle {
         router.post("/:telegramId/file/update-auto-settings").handler(this::handleAutoSettingsUpdate);
 
         router.get("/files/count").handler(this::handleFilesCount);
+        router.get("/storage").handler(ctx -> ctx.json(new JsonObject()
+                .put("appRoot", Config.APP_ROOT)
+                .put("downloadRoot", Config.DOWNLOAD_ROOT)
+                .put("filesRoot", Path.of(Config.DOWNLOAD_ROOT, "files").toString())));
         router.get("/files").handler(this::handleFiles);
         router.post("/files/start-download-multiple").handler(this::handleFileStartDownloadMultiple);
         router.post("/files/cancel-download-multiple").handler(this::handleFileCancelDownloadMultiple);
@@ -1081,6 +1085,7 @@ public class HttpVerticle extends AbstractVerticle {
         ctx.request().params().forEach(filter::put);
         filter.put("search", URLUtil.decode(filter.get("search")));
 
+        if (!validateFileFilter(ctx, filter)) return;
         telegramVerticle.getChatFiles(Convert.toLong(chatId), filter)
                 .onSuccess(ctx::json)
                 .onFailure(ctx::fail);
@@ -1254,6 +1259,7 @@ public class HttpVerticle extends AbstractVerticle {
         }
         List<Path> roots = new ArrayList<>();
         roots.add(Path.of(Config.TELEGRAM_ROOT));
+        if (Files.isDirectory(Path.of(Config.DOWNLOAD_ROOT))) roots.add(Path.of(Config.DOWNLOAD_ROOT));
         Path sharedRoot = Config.shareConfiguration().sharedRoot();
         if (Files.isDirectory(sharedRoot)) {
             roots.add(sharedRoot);
@@ -1514,9 +1520,21 @@ public class HttpVerticle extends AbstractVerticle {
         ctx.request().params().forEach(filter::put);
         filter.put("search", URLUtil.decode(filter.get("search")));
 
+        if (!validateFileFilter(ctx, filter)) return;
         FileRecordRetriever.getFiles(0, filter)
                 .onSuccess(ctx::json)
                 .onFailure(ctx::fail);
+    }
+
+    private boolean validateFileFilter(RoutingContext ctx, Map<String, String> filter) {
+        try {
+            FileSearchFilter.sizeRange(filter);
+            FileSearchFilter.extensions(filter.get("extensions"));
+            return true;
+        } catch (IllegalArgumentException invalid) {
+            ctx.response().setStatusCode(400).end(JsonObject.of("error", invalid.getMessage()).encode());
+            return false;
+        }
     }
 
     private void handleFileTagsUpdate(RoutingContext ctx) {

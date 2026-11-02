@@ -34,6 +34,7 @@ const AutomationButton = React.forwardRef<
         <TooltipTrigger asChild>
           <button
             ref={ref}
+            aria-label={t("Automation settings")}
             className={cn(
               "group relative w-32 cursor-pointer overflow-hidden rounded border bg-background p-1 text-center font-semibold shadow-sm",
               isMobile && "h-10 w-full",
@@ -45,7 +46,7 @@ const AutomationButton = React.forwardRef<
               {autoEnabled ? t("Running") : t("Stopped")}
             </span>
             <div className="absolute top-0 z-10 flex h-full w-full translate-x-12 items-center justify-center gap-2 text-primary-foreground opacity-0 transition-all duration-300 group-hover:-translate-x-1 group-hover:opacity-100">
-              <span>{autoEnabled ? t("Disable") : t("Enable")}</span>
+              <span>{t("Configure")}</span>
               <ArrowRight />
             </div>
             <div
@@ -62,15 +63,7 @@ const AutomationButton = React.forwardRef<
             ></div>
           </button>
         </TooltipTrigger>
-        <TooltipContent>
-          {autoEnabled
-            ? t(
-                "Automation is enabled, you can disable it by clicking the button",
-              )
-            : t(
-                "Automation is disabled, you can enable it by clicking the button",
-              )}
-        </TooltipContent>
+        <TooltipContent>{t("Automation settings")}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

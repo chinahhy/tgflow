@@ -13,6 +13,8 @@ import { LocalStorageProvider } from "@/hooks/use-local-storage";
 import { AdminSessionProvider } from "@/hooks/use-admin-session";
 import { AdminAuthGate } from "@/components/admin-auth-gate";
 import { LanguageProvider } from "@/components/language-provider";
+import { AppShell } from "@/components/app-shell";
+import { TelegramChatProvider } from "@/hooks/use-telegram-chat";
 
 export const metadata: Metadata = {
   title: "TGFlow",
@@ -67,7 +69,9 @@ export default async function RootLayout({
                     <WebSocketProvider>
                       <SettingsProvider>
                         <TelegramAccountProvider>
-                          {children}
+                          <TelegramChatProvider>
+                            <AppShell>{children}</AppShell>
+                          </TelegramChatProvider>
                         </TelegramAccountProvider>
                       </SettingsProvider>
                     </WebSocketProvider>

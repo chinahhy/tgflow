@@ -82,6 +82,7 @@ public class DataVerticle extends AbstractVerticle {
                 new SettingRecord.SettingRecordDefinition(),
                 new TelegramRecord.TelegramRecordDefinition(),
                 new FileRecord.FileRecordDefinition(),
+                new DownloadFailures(),
                 new StatisticRecord.StatisticRecordDefinition(),
                 new AdminAccountRecord.AdminAccountRecordDefinition(),
                 new AdminSessionRecord.AdminSessionRecordDefinition(),

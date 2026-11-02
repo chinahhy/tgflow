@@ -36,7 +36,13 @@ export function AccountList({ accounts, onSelectAccount }: AccountListProps) {
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={`data:image/jpeg;base64,${account.avatar}`} />
+                <AvatarImage
+                  src={
+                    account.avatar
+                      ? `data:image/jpeg;base64,${account.avatar}`
+                      : undefined
+                  }
+                />
                 <AvatarFallback>{account.name[0]}</AvatarFallback>
               </Avatar>
               <div className="flex-1">

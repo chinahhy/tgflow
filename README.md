@@ -4,6 +4,10 @@
 
 TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可证及原作者 **jarvis2f** 的版权声明。当前基线为稳定版 **0.4.0**，上游提交为 [`e48cee9f3509b574f7a69cc3a2a45a8bfe13f589`](https://github.com/jarvis2f/telegram-files/commit/e48cee9f3509b574f7a69cc3a2a45a8bfe13f589)，来源记录见 [UPSTREAM.json](UPSTREAM.json)。
 
+## dev 自定义版本
+
+当前分支实现了可折叠侧栏和七个独立页面、原名落盘、SSD／HDD 双目录、下载失败原因、大小与扩展名筛选，以及自动化配置指南。部署和使用步骤见 **[dev 使用指南](docs/dev-guide.md)**。
+
 ## 功能
 
 - 多 Telegram 账号管理，支持手机验证码、两步验证和扫码登录。
@@ -24,10 +28,10 @@ TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可
 
 | 分支 | 用途 | Docker Hub 标签 |
 | --- | --- | --- |
-| `main` | 稳定汉化版，优先同步上游稳定版本 | `<用户名>/tgflow:latest` |
-| `dev` | 从已验证的 main 创建，用于后续自定义开发 | `<用户名>/tgflow:dev` |
+| `main` | 稳定汉化版，优先同步上游稳定版本 | `hoya0803/tgflow:latest` |
+| `dev` | 原名下载、双盘存储、新界面与扩展筛选 | `hoya0803/tgflow:dev` |
 
-两条分支独立发布，dev 不会覆盖 latest，也不会自动合并回 main。目前不增加额外业务功能。
+两条分支独立发布，dev 不会覆盖 latest，也不会自动合并回 main。本分支的自定义功能见上方 dev 使用指南。
 
 **镜像是否已发布，请以 [Actions](https://github.com/chinahhy/tgflow/actions/workflows/docker-publish.yml) 的发布步骤及实际 Docker Hub 仓库为准。** 未设置 Docker Hub 凭据时，工作流仍执行测试、构建和容器检查，并明确跳过推送。
 
@@ -70,16 +74,18 @@ HTTP_SECURE_COOKIES: "false"
 | 变量 | 说明 |
 | --- | --- |
 | `DOCKERHUB_USERNAME` | 实际 Docker Hub 用户名，仅用于选择镜像，不假定与 GitHub 相同 |
-| `IMAGE_TAG` | `latest` 或 `dev`，默认 `latest` |
+| `IMAGE_TAG` | 本分支默认 `dev`，稳定版使用 main 分支的 Compose 与 `latest` |
 | `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` | 必填，Telegram 应用凭据 |
 | `PORT` | 主机端口，默认 `6543` |
-| `DATA_DIR` | 持久化目录，默认 `./data` |
+| `CONFIG_DIR` | 应用状态目录，示例 `./config`，建议 SSD |
+| `DOWNLOAD_DIR` | 下载暂存与完成文件目录，默认 `./downloads`，建议 HDD |
+| `DATA_DIR` | 兼容旧配置；未设置 CONFIG_DIR 时作为应用状态目录 |
 | `HTTP_ALLOWED_ORIGINS` | 实际访问来源，多个值用逗号分隔 |
 | `LOG_LEVEL` | 默认 `INFO` |
 | `TELEGRAM_LOG_LEVEL` | 默认 `0` |
 | `PUID` / `PGID` | 可选，挂载目录对应的用户和组 ID，默认 `0` |
 
-Compose 还固定配置 `TZ=Asia/Shanghai`、`APP_ENV=prod`、`APP_ROOT=/app/data`、`DB_TYPE=sqlite`、`SHARE_ENABLED=false`。`HTTP_SECURE_COOKIES` 在 Compose 中按访问协议配置。
+Compose 还固定配置 `TZ=Asia/Shanghai`、`APP_ENV=prod`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`DB_TYPE=sqlite`、`SHARE_ENABLED=false`。`HTTP_SECURE_COOKIES` 在 Compose 中按访问协议配置。
 
 上游仍支持外部数据库（`DB_TYPE`、`DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`）以及可选分享和 AI 配置；精简示例不会自动启用这些功能。完整运行参数以 `api/src/main/java/telegram/files/Config.java` 及 `share/ShareConfiguration.java` 为准。
 
@@ -109,9 +115,9 @@ docker compose exec -it tgflow tfm admin apply-reset <管理员用户名>
 
 ### 数据目录与升级
 
-`DATA_DIR` 整体挂载到 `/app/data`，包含 SQLite `data.db`、`account/` 下的账号会话及账号文件、`logs/` 等运行数据。账号实际目录可在“设置 → 存储”查看；自定义自动转移目录若位于 `/app/data` 之外，需要单独配置挂载并备份。
+`CONFIG_DIR` 挂载到 `/app/data`，保存数据库、账号会话、索引、配置与日志；`DOWNLOAD_DIR` 挂载到 `/downloads`，保存下载暂存与新完成的原名附件。历史有效文件不批量迁移。目录含义、双硬盘示例与回退要求见 [dev 使用指南](docs/dev-guide.md)。
 
-升级前，在自己的维护窗口停止 TGFlow 并备份**整个持久化目录**及 `.env`，避免复制正在写入的 SQLite 数据库。随后：
+升级前，在自己的维护窗口停止 TGFlow 并备份**完整配置目录和下载目录**及 `.env`，避免复制正在写入的 SQLite 数据库。随后：
 
 ```bash
 docker compose pull

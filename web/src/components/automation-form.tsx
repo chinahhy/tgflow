@@ -1,5 +1,6 @@
 "use client";
 import { t } from "@/lib/i18n";
+import { AutomationFileRules } from "@/components/automation-file-rules";
 import { useLocale } from "@/hooks/use-locale";
 
 import { Label } from "@/components/ui/label";
@@ -192,6 +193,12 @@ export default function AutomationForm({
                 </Badge>
               </HintLine>
             </HintPanel>
+            <AutomationFileRules
+              value={auto.download.rule}
+              onChange={(rule) =>
+                onChange({ ...auto, download: { ...auto.download, rule } })
+              }
+            />
             <DownloadRule
               value={auto.download.rule}
               onChange={(value) => {
@@ -345,7 +352,7 @@ function DownloadRule({ value, onChange }: DownloadRuleProps) {
                 </SelectTrigger>
                 <SelectContent>
                   {["photo", "video", "audio", "file"].map((type) => (
-                    <SelectItem key={t(type)} value={t(type)}>
+                    <SelectItem key={type} value={type}>
                       {t(type)}
                     </SelectItem>
                   ))}
@@ -356,7 +363,7 @@ function DownloadRule({ value, onChange }: DownloadRuleProps) {
                 {value.fileTypes.length > 0 ? (
                   value.fileTypes.map((type) => (
                     <Badge
-                      key={t(type)}
+                      key={type}
                       className="flex items-center gap-1 px-2 py-1 capitalize"
                       variant="secondary"
                     >

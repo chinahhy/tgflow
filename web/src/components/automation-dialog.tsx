@@ -36,7 +36,7 @@ const DEFAULT_AUTO: Auto = {
     rule: {
       query: "",
       fileTypes: [],
-      downloadHistory: true,
+      downloadHistory: false,
       downloadCommentFiles: false,
       filterExpr: "",
     },
@@ -44,10 +44,10 @@ const DEFAULT_AUTO: Auto = {
   transfer: {
     enabled: false,
     rule: {
-      transferHistory: true,
+      transferHistory: false,
       destination: "",
       transferPolicy: "GROUP_BY_CHAT",
-      duplicationPolicy: "OVERWRITE",
+      duplicationPolicy: "SKIP",
       useCaptionName: false,
       extra: {},
     },
@@ -355,6 +355,22 @@ export default function AutomationDialog() {
               </Button>
               <Button
                 onClick={() => {
+                  const rule = auto.download.rule;
+                  if (
+                    (rule.minSize !== undefined &&
+                      (!Number.isFinite(rule.minSize) || rule.minSize < 0)) ||
+                    (rule.maxSize !== undefined &&
+                      (!Number.isFinite(rule.maxSize) ||
+                        rule.maxSize < (rule.minSize ?? 0)))
+                  ) {
+                    toast({
+                      variant: "warning",
+                      description: t(
+                        "Maximum size must be greater than or equal to minimum size.",
+                      ),
+                    });
+                    return;
+                  }
                   const folderPathRegex =
                     /^[\/\\]?(?:[^<>:"|?*\/\\]+[\/\\]?)*$/;
                   if (

@@ -9,7 +9,8 @@ import {
 import useSWRInfinite from "swr/infinite";
 import { useWebsocket } from "@/hooks/use-websocket";
 import { WebSocketMessageType } from "@/lib/websocket-types";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { readFileFilters, writeFileFilters } from "@/lib/file-filter-url";
 import { useDebounce, useDebouncedCallback } from "use-debounce";
 
 const DEFAULT_FILTERS: FileFilter = {
@@ -24,7 +25,7 @@ const DEFAULT_FILTERS: FileFilter = {
 
 type FileResponse = {
   files: TelegramFile[];
-  count: number;
+  count?: number | null;
   nextFromMessageId: number;
   nextSeedOffset?: number;
   hasMore?: boolean;
@@ -66,19 +67,49 @@ export function useFiles(
         shareErrorCode?: string;
         tags?: string;
         removed?: boolean;
+        errorCode?: string | null;
+        errorMessage?: string | null;
+        errorAt?: number | null;
       }
     >
   >({});
-  const [filters, setFilters, clearFilters] = useLocalStorage<FileFilter>(
-    "telegramFileListFilter",
-    { ...DEFAULT_FILTERS, offline: noAccountSpecified },
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const filters = useMemo(
+    () =>
+      readFileFilters(
+        new URLSearchParams(searchParams.toString()),
+        pathname,
+        noAccountSpecified,
+      ),
+    [searchParams, pathname, noAccountSpecified],
   );
+  const setFilters = (
+    value: FileFilter | ((previous: FileFilter) => FileFilter),
+  ) => {
+    const next = typeof value === "function" ? value(filters) : value;
+    const query = writeFileFilters(
+      new URLSearchParams(searchParams.toString()),
+      next,
+    );
+    router.replace(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+  const clearFilters = () => {
+    setFilters({
+      ...DEFAULT_FILTERS,
+      type: "all",
+      offline: noAccountSpecified,
+    });
+  };
   const getKey = (page: number, previousPageData: FileResponse) => {
     const params = new URLSearchParams({
       ...(filters.search && {
         search: window.encodeURIComponent(filters.search),
       }),
       ...(filters.type && { type: filters.type }),
+      ...(filters.extensions && { extensions: filters.extensions }),
+      ...(pathname === "/downloads" && { taskOnly: "true" }),
       ...(filters.downloadStatus && { downloadStatus: filters.downloadStatus }),
       ...(filters.transferStatus && { transferStatus: filters.transferStatus }),
       ...(filters.offline && { offline: "true" }),
@@ -142,6 +173,7 @@ export function useFiles(
   } = useSWRInfinite<FileResponse, Error>(getKey, {
     revalidateFirstPage: false,
     keepPreviousData: true,
+    refreshInterval: noAccountSpecified ? 5000 : 0,
   });
 
   const [debounceLoading] = useDebounce(isLoading || isValidating, 500, {
@@ -171,6 +203,9 @@ export function useFiles(
       torrentStatus?: string;
       removed?: boolean;
       type?: string;
+      errorCode?: string | null;
+      errorMessage?: string | null;
+      errorAt?: number | null;
       sharedByMe?: boolean;
       shareStatus?: TelegramFile["shareStatus"];
       sharedSourceId?: string;
@@ -209,6 +244,9 @@ export function useFiles(
       ...prev,
       [data.uniqueId]: {
         fileId: data.fileId,
+        errorCode: data.errorCode,
+        errorMessage: data.errorMessage,
+        errorAt: data.errorAt,
         downloadStatus:
           data.downloadStatus ?? prev[data.uniqueId]?.downloadStatus,
         localPath: data.localPath ?? prev[data.uniqueId]?.localPath,
@@ -230,8 +268,7 @@ export function useFiles(
         shareDescription:
           data.shareDescription ?? prev[data.uniqueId]?.shareDescription,
         shareTags: data.shareTags ?? prev[data.uniqueId]?.shareTags,
-        shareCategory:
-          data.shareCategory ?? prev[data.uniqueId]?.shareCategory,
+        shareCategory: data.shareCategory ?? prev[data.uniqueId]?.shareCategory,
         shareAccessScope:
           data.shareAccessScope ?? prev[data.uniqueId]?.shareAccessScope,
         sharePublicMessageUrl:
@@ -244,13 +281,8 @@ export function useFiles(
   }, [debouncedThumbnailRefetch, lastJsonMessage]);
 
   useEffect(() => {
-    if (noAccountSpecified && !filters.offline) {
-      setFilters((prev) => ({
-        ...prev,
-        offline: true,
-      }));
-    }
-  }, [filters.offline, noAccountSpecified, setFilters]);
+    setLatestFileStatus({});
+  }, [pages]);
 
   const files = useMemo(() => {
     if (!pages) return [];
@@ -262,6 +294,11 @@ export function useFiles(
         }
         const merged = {
           ...file,
+          ...(latestFilesStatus[file.uniqueId] && {
+            errorCode: latestFilesStatus[file.uniqueId]?.errorCode,
+            errorMessage: latestFilesStatus[file.uniqueId]?.errorMessage,
+            errorAt: latestFilesStatus[file.uniqueId]?.errorAt,
+          }),
           id: latestFilesStatus[file.uniqueId]?.fileId ?? file.id,
           tags: latestFilesStatus[file.uniqueId]?.tags ?? file.tags,
           downloadStatus:
@@ -353,7 +390,9 @@ export function useFiles(
     if (lastPage) {
       if (lastPage.hasMore !== undefined) return lastPage.hasMore;
       const count = lastPage.count;
-      hasMore = count > fetchedCount && lastPage.nextFromMessageId !== 0;
+      hasMore =
+        (typeof count !== "number" || count > fetchedCount) &&
+        lastPage.nextFromMessageId !== 0;
     }
     return hasMore;
   }, [pages]);
@@ -362,7 +401,7 @@ export function useFiles(
     if (!pages || pages.length === 0) return undefined;
     for (let index = pages.length - 1; index >= 0; index -= 1) {
       const count = pages[index]?.count;
-      if (count !== undefined) {
+      if (typeof count === "number") {
         return count;
       }
     }
@@ -491,6 +530,8 @@ export function useFiles(
     files,
     filters,
     isLoading: debounceLoading,
+    error,
+    refresh: mutate,
     updateField,
     handleFilterChange,
     clearFilters,

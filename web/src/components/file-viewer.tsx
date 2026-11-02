@@ -24,7 +24,10 @@ type FileViewerProps = {
   onOpenChange: (open: boolean) => void;
   file: TelegramFile;
   onFileChange: (file: TelegramFile) => void;
-} & ReturnType<typeof useFiles>;
+} & Pick<
+  ReturnType<typeof useFiles>,
+  "hasMore" | "handleLoadMore" | "isLoading"
+>;
 
 export default function FileViewer({
   open,

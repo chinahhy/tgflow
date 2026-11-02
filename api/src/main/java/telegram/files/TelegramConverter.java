@@ -136,7 +136,7 @@ public class TelegramConverter {
                     shareByFile.get(file.getString("uniqueId"))
             ));
             return files;
-        });
+        }).compose(DownloadFailures::enrich);
     }
 
     public static List<JsonObject> convertSeedOnlyFiles(List<TorrentRecord> torrents) {

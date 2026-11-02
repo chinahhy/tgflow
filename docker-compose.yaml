@@ -1,11 +1,12 @@
 services:
   tgflow:
-    image: ${DOCKERHUB_USERNAME:?请在 .env 中设置 Docker Hub 用户名}/tgflow:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?请在 .env 中设置 Docker Hub 用户名}/tgflow:${IMAGE_TAG:-dev}
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
       APP_ENV: prod
       APP_ROOT: /app/data
+      DOWNLOAD_ROOT: /downloads
       DB_TYPE: sqlite
       HTTP_SECURE_COOKIES: "false"
       HTTP_ALLOWED_ORIGINS: ${HTTP_ALLOWED_ORIGINS:-http://10.0.0.104:6543}
@@ -19,7 +20,8 @@ services:
     ports:
       - "${PORT:-6543}:80"
     volumes:
-      - ${DATA_DIR:-./data}:/app/data
+      - ${CONFIG_DIR:-${DATA_DIR:-./data}}:/app/data
+      - ${DOWNLOAD_DIR:-./downloads}:/downloads
     healthcheck:
       test: [CMD, curl, -fsS, http://127.0.0.1/api/health]
       interval: 30s

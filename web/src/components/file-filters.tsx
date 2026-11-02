@@ -53,6 +53,7 @@ import { RangeSlider } from "@/components/ui/slider";
 import { cn, split } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import FileTypeFilter from "@/components/file-type-filter";
+import { usePathname } from "next/navigation";
 import FileStatusFilter from "@/components/file-status-filter";
 import { Switch } from "@/components/ui/switch";
 import useIsMobile from "@/hooks/use-is-mobile";
@@ -517,6 +518,7 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
                 min={0}
                 max={config.max}
                 step={config.step}
+                aria-label={t("Minimum size")}
                 value={minInput}
                 onChange={(e) => handleMinInputChange(e.target.value)}
                 onBlur={handleInputBlur}
@@ -534,6 +536,7 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
                 min={0}
                 max={config.max}
                 step={config.step}
+                aria-label={t("Maximum size")}
                 value={maxInput}
                 onChange={(e) => handleMaxInputChange(e.target.value)}
                 onBlur={handleInputBlur}
@@ -676,6 +679,7 @@ export default function FileFilters({
   showMobileLayoutToggle = false,
 }: FileFiltersProps) {
   useLocale();
+  const pathname = usePathname();
   const noAccountSpecified = telegramId === "-1" && chatId === "-1";
   const [localFilters, setLocalFilters] = useState<FileFilter>(filters);
   const isMobile = useIsMobile();
@@ -893,7 +897,7 @@ export default function FileFilters({
             aria-label={isMobile ? t("Open filters") : undefined}
           >
             <Filter />
-            {!isMobile && "Filters"}
+            {!isMobile && t("Filters")}
             {filterCount > 0 && (
               <span className="absolute left-0 top-0 -ml-1 -mt-1 flex size-6 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                 {filterCount}
@@ -1035,9 +1039,30 @@ export default function FileFilters({
               </div>
             )}
 
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="file-extensions">{t("File extensions")}</Label>
+              <Input
+                id="file-extensions"
+                placeholder={t("e.g. mp4, mkv, zip")}
+                value={localFilters.extensions ?? ""}
+                onChange={(e) =>
+                  setLocalFilters((prev) => ({
+                    ...prev,
+                    extensions: e.target.value,
+                    type: e.target.value ? "all" : prev.type,
+                  }))
+                }
+              />
+            </div>
+            <SizeFilter
+              sizeRange={localFilters.sizeRange}
+              sizeUnit={localFilters.sizeUnit}
+              onChange={handleSizeChange}
+            />
             {localFilters.offline && (
               <>
                 <FileStatusFilter
+                  downloadLocked={pathname === "/files"}
                   downloadStatus={localFilters.downloadStatus}
                   transferStatus={localFilters.transferStatus}
                   onChange={handleStatusChange}
@@ -1052,12 +1077,6 @@ export default function FileFilters({
                   dateType={localFilters.dateType}
                   dateRange={localFilters.dateRange}
                   onChange={handleDateChange}
-                />
-
-                <SizeFilter
-                  sizeRange={localFilters.sizeRange}
-                  sizeUnit={localFilters.sizeUnit}
-                  onChange={handleSizeChange}
                 />
 
                 <SortFilter
