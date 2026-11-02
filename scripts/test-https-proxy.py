@@ -68,7 +68,7 @@ def main():
     assert match, "Disposable container did not produce its bootstrap code"
     credentials = {"username": "proxy-test-admin", "password": "Disposable-TGFlow-proxy-test-password"}
     status, _, headers = request("/api/auth/bootstrap", {**credentials, "bootstrapToken": match[1]})
-    assert status == 200, f"HTTPS bootstrap rejected with status {status}"
+    assert status == 201, f"HTTPS bootstrap rejected with status {status}"
 
     def assert_secure_cookies(headers):
         cookies = http.cookies.SimpleCookie()
@@ -85,7 +85,7 @@ def main():
     assert request("/api/auth/session")[0] == 200, "HTTPS session cookie was not accepted"
     csrf = next(cookie.value for cookie in jar if cookie.name == "tf_csrf")
     assert request("/api/auth/logout", {})[0] == 403, "CSRF protection was bypassed"
-    assert request("/api/auth/logout", {}, headers={"X-CSRF-Token": csrf})[0] == 200
+    assert request("/api/auth/logout", {}, headers={"X-CSRF-Token": csrf})[0] == 204
     assert request("/api/auth/session")[0] == 401, "Logout did not revoke the session"
     status, body, headers = request("/api/auth/login", credentials)
     assert status == 200 and body.get("authenticated"), f"HTTPS login rejected with status {status}"
