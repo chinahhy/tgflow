@@ -68,7 +68,24 @@ class TelegramStorageFlowTest {
                     file.local.isDownloadingCompleted = true;
                     file.local.isDownloadingActive = false;
                     file.local.downloadedSize = 3;
-                    return telegram.startDownload(message.chatId, message.id, file.id);
+                    // A cached download can be incomplete on disk; every completion entry point
+                    // must persist the error instead of leaving the task marked as downloading.
+                    return vertx.executeBlocking(() -> Files.write(source, new byte[]{1, 2}))
+                            .compose(_ -> telegram.startDownload(message.chatId, message.id, file.id))
+                            .transform(attempt -> {
+                                context.verify(() -> assertTrue(attempt.failed()));
+                                return DownloadFailures.enrich(java.util.List.of(
+                                        new io.vertx.core.json.JsonObject().put("uniqueId", record.uniqueId())));
+                            })
+                            .compose(failures -> {
+                                context.verify(() -> assertEquals("FILE_STORAGE_FAILED", failures.getFirst().getString("errorCode")));
+                                return DataVerticle.fileRepository.getByUniqueId(record.uniqueId());
+                            })
+                            .compose(failed -> {
+                                context.verify(() -> assertTrue(failed.isDownloadStatus(FileRecord.DownloadStatus.error)));
+                                return vertx.executeBlocking(() -> Files.write(source, new byte[]{1, 2, 3}));
+                            })
+                            .compose(_ -> telegram.startDownload(message.chatId, message.id, file.id));
                 })
                 .compose(_ -> telegram.loadPreview(record.uniqueId()))
                 .compose(preview -> {

@@ -1426,7 +1426,7 @@ public class TelegramVerticle extends AbstractVerticle {
                             if (downloadStatus == FileRecord.DownloadStatus.completed) {
                                 completeDownload(file, fileRecord)
                                         .onSuccess(r -> sendFileStatusHttpEvent(file, r))
-                                        .onFailure(error -> persistDownloadFailure(fileRecord, error, "FILE_STORAGE_FAILED"));
+                                        .onFailure(error -> log.debug("File completion failed: %s".formatted(error.getMessage())));
                             } else {
                                 // A TDLib cache eviction must not erase a published file or a recorded failure.
                                 if (fileRecord.isDownloadStatus(FileRecord.DownloadStatus.error)) return;
@@ -1507,7 +1507,9 @@ public class TelegramVerticle extends AbstractVerticle {
         return vertx.<String>executeBlocking(() -> DownloadStorage.configured().publish(record, file.local.path))
                 .compose(path -> DataVerticle.fileRepository.updateDownloadStatus(file.id, file.remote.uniqueId,
                         path, FileRecord.DownloadStatus.completed, System.currentTimeMillis()))
-                .compose(update -> DownloadFailures.clear(record.uniqueId()).map(update));
+                .compose(update -> DownloadFailures.clear(record.uniqueId()).map(update))
+                .recover(error -> persistDownloadFailure(record, error, "FILE_STORAGE_FAILED")
+                        .compose(_ -> Future.failedFuture(error)));
     }
 
     private Future<Void> persistDownloadFailure(FileRecord record, Throwable error, String code) {
