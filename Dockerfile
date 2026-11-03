@@ -24,7 +24,9 @@ ARG TARGETARCH
 ENV JAVA_HOME=/jre \
     PATH="/jre/bin:$PATH" \
     LANG=C.UTF-8 \
-    NGINX_PORT=8026
+    NGINX_PORT=8026 \
+    APP_ROOT=/app/data \
+    DOWNLOAD_ROOT=/downloads
 
 RUN --mount=type=cache,target=/var/cache/apk \
     addgroup -S tf && \
@@ -45,6 +47,9 @@ COPY --chown=tf:tf ./entrypoint.sh .
 COPY --chown=tf:tf ./nginx.conf.template /etc/nginx/nginx.conf.template
 
 EXPOSE $NGINX_PORT
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -fsS --max-time 8 "http://127.0.0.1:${NGINX_PORT}/api/health" >/dev/null || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/bin/sh", "./entrypoint.sh"]

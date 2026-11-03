@@ -29,8 +29,6 @@
 复制仓库的 `.env.example` 为 `.env`。将下列示例路径换成主机的实际路径，不要直接照抄磁盘名称：
 
 ```dotenv
-DOCKERHUB_USERNAME=hoya0803
-IMAGE_TAG=dev
 CONFIG_DIR=/path/on/ssd/tgflow-dev/config
 DOWNLOAD_DIR=/path/on/hdd/tgflow-dev/downloads
 PORT=8026
@@ -92,7 +90,9 @@ docker compose -p tgflow-dev logs -f tgflow
 - Cookie 默认为自动：HTTP 使用普通 Cookie，HTTPS 使用 Secure Cookie；管理员会话、CSRF Cookie 和 Telegram Web 会话保持一致。局域网 IP 的 HTTP 登录与域名的 HTTPS 登录可各自使用。
 - 外层反代保留 Host 或 `X-Forwarded-Host`（含端口），设置实际 `X-Forwarded-Proto` 并转发 WebSocket。容器保留有效的外部主机和协议，应用只接受本机 Nginx 传来的这些信息。
 
-精简 Compose 已移除 `APP_ENV`、`DB_TYPE`、`HTTP_ALLOWED_ORIGINS`、`HTTP_SECURE_COOKIES`，由程序采用生产模式、SQLite 和访问策略的默认值。`APP_ROOT=/app/data` 与 `DOWNLOAD_ROOT=/downloads` 保留，确保配置和下载分别写入对应挂载。
+Compose 使用固定镜像 `hoya0803/tgflow:dev`。`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads` 已作为镜像默认值，日志默认为 `INFO`，无需在 Compose 填写。只修改挂载的主机路径，配置和下载仍分别落在 SSD 与 HDD。程序继续采用生产模式、SQLite 与自动来源 / Cookie 策略。
+
+镜像自带 Docker 定期健康检查，每 30 秒访问本容器的 `/api/health`，仅标记服务状态，不会单凭 `unhealthy` 自动重启。旧 Compose 中重复的 `healthcheck` 可以删除，无需另建应用或 NAS 定时任务。
 
 如有特殊需求，可选参数仍兼容；请在 Compose 的 `environment` 中显式添加，仅写在宿主机 `.env` 不会传入容器：
 
@@ -106,7 +106,7 @@ docker compose -p tgflow-dev logs -f tgflow
 
 ### 从旧 dev 升级
 
-旧 Compose 的 `6543:80` 必须对齐新的容器端口：推荐改为 `8026:8026`，也可用 `6543:8026` 保留原来的主机端口。相应更新健康检查与 Lucky 的后端目标；端口调整不迁移或改写下载文件与数据库。
+旧 Compose 的 `6543:80` 必须对齐新的容器端口：推荐改为 `8026:8026`，也可用 `6543:8026` 保留原来的主机端口。相应更新 Lucky 的后端目标，并删除旧 Compose 中重复的 `healthcheck`；新镜像自带健康检查。端口调整不迁移或改写下载文件与数据库。
 
 删除旧部署中固定的 `HTTP_SECURE_COOKIES=true/false`，或改为 `auto`，即可使用自动模式。`HTTP_ALLOWED_ORIGINS` 可以删除；保留旧值也不会阻挡同源域名。修改部署配置后重新部署容器以应用环境变量，仅点普通重启不会更新变量。
 

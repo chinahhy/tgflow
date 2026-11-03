@@ -40,7 +40,7 @@ TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可
 适用于极空间 Z4Pro、Dockge 及一般 AMD64 Linux 主机：单容器、SQLite、默认端口 `8026`、时区 `Asia/Shanghai`、`restart: unless-stopped`。基础 Telegram 下载不需要 PostgreSQL、MySQL 或 qBittorrent。
 
 1. 在新的部署目录放入 [docker-compose.yaml](docker-compose.yaml) 和 [.env.example](.env.example)，将后者复制为 `.env`。
-2. 填写实际 Docker Hub 用户名、Telegram API ID / Hash，并确认镜像已经发布。
+2. 镜像地址固定为 `hoya0803/tgflow:dev`，只需填写 Telegram API ID / Hash 和实际存储路径。
 3. 确认 `PORT` 对应的主机端口可用；普通 HTTP 或 HTTPS 反代无需填写来源和 Cookie 参数。
 4. 启动：
 
@@ -63,24 +63,23 @@ Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例�
 
 容器入口是 **HTTP 8026**，默认映射 **8026 → 8026**。Lucky 等外层反代负责 HTTPS，目标填写 `http://NAS地址:8026`；同一 Docker 网络中可使用 `http://tgflow:8026`。外层代理应保留原始 Host 或 `X-Forwarded-Host`（含端口）、设置实际 `X-Forwarded-Proto`，并支持 WebSocket。容器会保留有效的协议和原始主机信息。
 
-`HTTP_ALLOWED_ORIGINS` 只用于额外跨域前端；`HTTP_SECURE_COOKIES=true/false` 仍可显式覆盖自动策略。正常自用部署可省略它们。旧部署升级时，将 `6543:80` 改为 `8026:8026`；若想保留旧主机端口，可改为 `6543:8026`，并同步健康检查。原来固定的 Cookie 参数建议删除或改为 `auto`。详见 [反向代理配置](docs/dev-guide.md#https-反向代理)。
+`HTTP_ALLOWED_ORIGINS` 只用于额外跨域前端；`HTTP_SECURE_COOKIES=true/false` 仍可显式覆盖自动策略。正常自用部署可省略它们。旧部署升级时，将 `6543:80` 改为 `8026:8026`；若想保留旧主机端口，可改为 `6543:8026`；健康检查由新镜像自带，无需在 Compose 重复填写。原来固定的 Cookie 参数建议删除或改为 `auto`。详见 [反向代理配置](docs/dev-guide.md#https-反向代理)。
 
 ### 环境变量
 
 | 变量 | 说明 |
 | --- | --- |
-| `DOCKERHUB_USERNAME` | 实际 Docker Hub 用户名，仅用于选择镜像，不假定与 GitHub 相同 |
-| `IMAGE_TAG` | 本分支默认 `dev`，稳定版使用 main 分支的 Compose 与 `latest` |
 | `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` | 必填，Telegram 应用凭据 |
 | `PORT` | 主机端口，默认 `8026`，容器入口 `8026` |
 | `CONFIG_DIR` | 应用状态目录，示例 `./config`，建议 SSD |
 | `DOWNLOAD_DIR` | 下载暂存与完成文件目录，默认 `./downloads`，建议 HDD |
 | `DATA_DIR` | 兼容旧配置；未设置 CONFIG_DIR 时作为应用状态目录 |
-| `LOG_LEVEL` | 默认 `INFO` |
 | `TELEGRAM_LOG_LEVEL` | 默认 `0` |
 | `PUID` / `PGID` | 可选，挂载目录对应的用户和组 ID，默认 `0` |
 
-Compose 只固定配置 `TZ=Asia/Shanghai`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`SHARE_ENABLED=false`。程序默认使用 `prod`、SQLite，并自动处理当前来源与 Cookie，无需在 Compose 重复填写。两个根目录必须保留，以对应 SSD 配置盘和 HDD 下载盘的挂载。
+镜像内置 `APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`，程序日志默认 `INFO`，Compose 无需再写这三项。镜像地址直接写为 `hoya0803/tgflow:dev`，修改 `volumes` 左侧的主机路径或 `.env` 中的 `CONFIG_DIR` / `DOWNLOAD_DIR` 即可分配 SSD 与 HDD。高级使用如需改变容器内目录或日志级别，须在 Compose 的 `environment` 显式覆盖。
+
+镜像自带 Docker 健康检查：每 30 秒请求容器自身的 `/api/health`，超时 10 秒，启动宽限 60 秒，连续失败 3 次标记为 `unhealthy`。它不访问外网，不需要在应用或 NAS 定时任务中重复添加；单凭 `unhealthy` 状态不会自动重启容器。
 
 需要额外跨域前端或固定 Cookie 策略时，在 Compose 的 `environment` 中显式添加 `HTTP_ALLOWED_ORIGINS` 或 `HTTP_SECURE_COOKIES`；精简文件不再转发这两个变量，仅写入宿主机 `.env` 不会生效。dev 已移除分享后台的启动和下载接入，`SHARE_ENABLED=true`、旧数据库设置或 qBittorrent 环境变量均无法开启。详见 [分享与 BT 禁用说明](docs/dev-guide.md#分享与-bt-永久禁用)。
 

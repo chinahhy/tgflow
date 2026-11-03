@@ -32,7 +32,7 @@ jobs:
           test -s .docker-artifacts/dependencies.txt
           test -s .docker-artifacts/web/index.html
           file tdlib/linux_amd64/libtdjni.so | grep -q 'x86-64'
-          DOCKERHUB_USERNAME=hoya0803 TELEGRAM_API_ID=1 TELEGRAM_API_HASH=test-only-placeholder docker compose config --quiet
+          TELEGRAM_API_ID=1 TELEGRAM_API_HASH=test-only-placeholder docker compose config --quiet
       - uses: docker/setup-buildx-action@v3
       - name: Build AMD64 image once
         uses: docker/build-push-action@v6
@@ -46,10 +46,7 @@ jobs:
       - name: Smoke test the built container
         run: |
           docker run -d --name tgflow-smoke \
-            -e APP_ENV=prod -e APP_ROOT=/app/data \
-            -e DOWNLOAD_ROOT=/downloads \
             -e TELEGRAM_API_ID=1 -e TELEGRAM_API_HASH=test-only-placeholder \
-            -e HTTP_SECURE_COOKIES=false -e SHARE_ENABLED=false \
             -v "$RUNNER_TEMP/tgflow-state:/app/data" \
             -v "$RUNNER_TEMP/tgflow-downloads:/downloads" \
             -p 127.0.0.1:8026:8026 tgflow:ci
@@ -61,6 +58,22 @@ jobs:
           curl --fail --silent http://127.0.0.1:8026/ | grep -q TGFlow
           curl --fail --silent http://127.0.0.1:8026/api/auth/bootstrap/status | grep -q true
           docker exec tgflow-smoke sh -c 'test -f /app/data/data.db && test -d /downloads'
+          for attempt in $(seq 1 60); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' tgflow-smoke)" = healthy ]; then break; fi
+            sleep 2
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' tgflow-smoke)" = healthy
+      - name: Verify image health check detects a missing service
+        run: |
+          docker run -d --name tgflow-unhealthy --health-interval=1s \
+            --health-start-period=1s --health-timeout=2s --health-retries=1 \
+            --entrypoint sleep tgflow:ci 60
+          for attempt in $(seq 1 20); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' tgflow-unhealthy)" = unhealthy ]; then break; fi
+            sleep 1
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' tgflow-unhealthy)" = unhealthy
+          docker rm -f tgflow-unhealthy
       - name: Test HTTPS reverse proxy and Secure cookies
         run: |
           mkdir -p "$RUNNER_TEMP/tgflow-proxy-tls"
@@ -68,7 +81,7 @@ jobs:
             -subj '/CN=tgflow-proxy-test' -addext 'subjectAltName=IP:127.0.0.1' \
             -keyout "$RUNNER_TEMP/tgflow-proxy-tls/key.pem" \
             -out "$RUNNER_TEMP/tgflow-proxy-tls/cert.pem" > /dev/null 2>&1
-          docker run -d --name tgflow-https-proxy --network host --entrypoint nginx \
+          docker run -d --name tgflow-https-proxy --no-healthcheck --network host --entrypoint nginx \
             -v "$GITHUB_WORKSPACE/.github/fixtures/https-proxy.conf:/etc/nginx/nginx.conf:ro" \
             -v "$RUNNER_TEMP/tgflow-proxy-tls:/test-tls:ro" \
             tgflow:ci -g 'daemon off;'
@@ -131,9 +144,9 @@ jobs:
       - name: Capture container failure details
         if: failure()
         run: |
-          for container_name in tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked; do
+          for container_name in tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked tgflow-unhealthy; do
             docker logs "$container_name" 2>&1 | sed '/one-time bootstrap code/d' || true
           done
       - name: Remove smoke-test container
         if: always()
-        run: docker rm -f tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked || true
+        run: docker rm -f tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked tgflow-unhealthy || true
