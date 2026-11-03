@@ -6,7 +6,6 @@ import json
 import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 import urllib.error
@@ -111,15 +110,13 @@ def verify_foreign_service(image):
         finally:
             remove_container()
 
-        with tempfile.TemporaryDirectory(prefix="tgflow-bind-test-") as root:
-            docker("run", "-d", "--name", CONTAINER, "--network", "host",
-                   "-v", f"{root}:/data", image)
-            try:
-                assert_failed()
-                logs = docker("logs", CONTAINER)
-                assert "Failed to start API server on 0.0.0.0:18028: Address in use" in logs.stdout + logs.stderr
-            finally:
-                remove_container()
+        docker("run", "-d", "--name", CONTAINER, "--network", "host", image)
+        try:
+            assert_failed()
+            logs = docker("logs", CONTAINER)
+            assert "Failed to start API server on 0.0.0.0:18028: Address in use" in logs.stdout + logs.stderr
+        finally:
+            remove_container()
         print("Foreign HTTP 200 is unhealthy; API port collision exits nonzero and releases Nginx")
     finally:
         server.shutdown()
@@ -128,26 +125,25 @@ def verify_foreign_service(image):
 
 
 def verify_service_exit(image, service):
-    with tempfile.TemporaryDirectory(prefix="tgflow-service-test-") as root:
-        docker("run", "-d", "--name", CONTAINER, "--network", "host",
-               "--health-interval=1s", "--health-start-period=1s",
-               "-v", f"{root}:/data", image)
-        try:
-            wait_for(healthy, "TGFlow startup")
-            status, identity, _ = request("/api/health")
-            assert status == 200 and identity == "tgflow-api", (status, identity)
-            assert request("/api/auth/bootstrap/status")[0] == 200
-            if service == "stop":
-                docker("stop", "--time", "40", CONTAINER)
-                assert state()["Status"] == "exited" and state()["ExitCode"] == 0
-                port_is_free()
-            else:
-                target = '$(pidof java)' if service == "java" else '"$(cat /run/nginx.pid)"'
-                docker("exec", CONTAINER, "sh", "-ec", f"kill -KILL {target}")
-                assert_failed()
-            print(f"Required service lifecycle verified: {service}")
-        finally:
-            remove_container()
+    # No host files are needed: disposable data stays in the container layer.
+    docker("run", "-d", "--name", CONTAINER, "--network", "host",
+           "--health-interval=1s", "--health-start-period=1s", image)
+    try:
+        wait_for(healthy, "TGFlow startup")
+        status, identity, _ = request("/api/health")
+        assert status == 200 and identity == "tgflow-api", (status, identity)
+        assert request("/api/auth/bootstrap/status")[0] == 200
+        if service == "stop":
+            docker("stop", "--time", "40", CONTAINER)
+            assert state()["Status"] == "exited" and state()["ExitCode"] == 0
+            port_is_free()
+        else:
+            target = '$(pidof java)' if service == "java" else '"$(cat /run/nginx.pid)"'
+            docker("exec", CONTAINER, "sh", "-ec", f"kill -KILL {target}", check=False)
+            assert_failed()
+        print(f"Required service lifecycle verified: {service}")
+    finally:
+        remove_container()
 
 
 def main():

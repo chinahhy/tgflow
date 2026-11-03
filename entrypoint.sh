@@ -76,10 +76,18 @@ setup_permissions
 # Start services
 start_services
 
-# Alpine ash supports waiting for either explicit child, including one that has
-# already exited. Stop its sibling instead of leaving a half-running container.
+# BusyBox ash waits for every listed PID even with wait -n. Check both children
+# and then wait for the exited one to retain its actual status, including when
+# it failed before monitoring started.
+while kill -0 "$JAVA_PID" 2>/dev/null && kill -0 "$NGINX_PID" 2>/dev/null; do
+    sleep 1
+done
 service_status=0
-wait -n "$JAVA_PID" "$NGINX_PID" || service_status=$?
+if ! kill -0 "$JAVA_PID" 2>/dev/null; then
+    wait "$JAVA_PID" || service_status=$?
+else
+    wait "$NGINX_PID" || service_status=$?
+fi
 echo "A required service exited (status $service_status); stopping container..."
 if [ "$service_status" -eq 0 ]; then
     service_status=1
