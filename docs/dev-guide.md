@@ -80,9 +80,9 @@ API ID / Hash 供所有账号共用；Telegram 日志级别在“高级设置”
 
 ## HTTPS 反向代理
 
-容器和主机默认都使用 HTTP `8027`。Lucky 负责外层 HTTPS，后端填 `http://NAS地址:8027`；同网络容器间可用 `http://tgflow:8027`。Java 内部 API 使用 `8028`，Nginx 的 API 和 WebSocket 转发均指向该端口。外部域名监听 `6270` 等其他端口也可以，与容器端口不必相同。
+容器和主机默认都使用 HTTP `8027`。Lucky 负责外层 HTTPS，后端填 `http://NAS地址:8027`；同网络容器间可用 `http://tgflow:8027`。Java 内部 API 使用 `18028`，Nginx 的 API 和 WebSocket 转发均指向该端口。外部域名监听 `6270` 等其他端口也可以，与容器端口不必相同。
 
-手动使用 `host` 网络时，网页入口 `8027` 和内部 API `8028` 都需要空闲；此模式不使用 `ports` 映射。占用 NAS 原有的 `8080` 服务不会再阻止 TGFlow 启动，Lucky 后端仍填写 `8027`。
+手动使用 `host` 网络时，网页入口 `8027` 和内部 API `18028` 都需要空闲；此模式不使用 `ports` 映射。NAS 原有的 `8080` 服务和监听 `8028` 的极空间音乐服务可继续运行，Lucky 后端仍填写 `8027`。
 
 日常自用部署无需写 `HTTP_ALLOWED_ORIGINS`、`HTTP_SECURE_COOKIES`：
 
@@ -92,7 +92,7 @@ API ID / Hash 供所有账号共用；Telegram 日志级别在“高级设置”
 
 Compose 使用固定镜像 `hoya0803/tgflow:dev`。`APP_ROOT=/data`、`DOWNLOAD_ROOT=/downloads` 已作为镜像默认值，日志默认为 `INFO`，无需在 Compose 填写。只修改挂载的主机路径，配置和下载仍分别落在 SSD 与 HDD。程序继续采用生产模式、SQLite 与自动来源 / Cookie 策略。
 
-镜像自带 Docker 定期健康检查，每 30 秒访问本容器的 `/api/health`，仅标记服务状态，不会单凭 `unhealthy` 自动重启。旧 Compose 中重复的 `healthcheck` 可以删除，无需另建应用或 NAS 定时任务。
+镜像自带 Docker 定期健康检查，每 30 秒访问本容器的 `/api/health`，同时验证 TGFlow API 身份，其他服务返回 200 不会被视为健康。健康状态本身不会触发重启；Java 或 Nginx 任一进程退出会结束整个容器，由现有重启策略处理。旧 Compose 中重复的 `healthcheck` 可以删除，无需另建应用或 NAS 定时任务。
 
 如有特殊需求，可选参数仍兼容；请在 Compose 的 `environment` 中显式添加，仅写在宿主机 `.env` 不会传入容器：
 

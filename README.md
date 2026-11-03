@@ -76,7 +76,7 @@ Dockge 可直接使用上述 Compose。默认访问 `http://NAS地址:8027`。�
 
 默认自动识别协议与当前访问来源，无需填写 `HTTP_ALLOWED_ORIGINS` 或 `HTTP_SECURE_COOKIES`。局域网 HTTP 使用普通 Cookie，HTTPS 域名使用 Secure Cookie；账号会话与旧的 Telegram Web 会话采用一致策略。即使以前配置过局域网来源，新域名下的同源访问也会自动放行。
 
-容器入口是 **HTTP 8027**，默认映射 **8027 → 8027**；Java 内部 API 使用 **8028**，Nginx 的 API / WebSocket 转发已同步。Lucky 等外层反代负责 HTTPS，目标填写 `http://NAS地址:8027`；同一 Docker 网络中可使用 `http://tgflow:8027`。外层代理应保留原始 Host 或 `X-Forwarded-Host`（含端口）、设置实际 `X-Forwarded-Proto`，并支持 WebSocket。容器会保留有效的协议和原始主机信息。
+容器入口是 **HTTP 8027**，默认映射 **8027 → 8027**；Java 内部 API 使用 **18028**，Nginx 的 API / WebSocket 转发已同步。Lucky 等外层反代负责 HTTPS，目标填写 `http://NAS地址:8027`；同一 Docker 网络中可使用 `http://tgflow:8027`。外层代理应保留原始 Host 或 `X-Forwarded-Host`（含端口）、设置实际 `X-Forwarded-Proto`，并支持 WebSocket。容器会保留有效的协议和原始主机信息。
 
 `HTTP_ALLOWED_ORIGINS` 只用于额外跨域前端；`HTTP_SECURE_COOKIES=true/false` 仍可显式覆盖自动策略。正常自用部署可省略它们。旧部署升级时，将 `6543:80` 改为 `8027:8027`；若想保留旧主机端口，可改为 `6543:8027`；健康检查由新镜像自带，无需在 Compose 重复填写。原来固定的 Cookie 参数建议删除或改为 `auto`。详见 [反向代理配置](docs/dev-guide.md#https-反向代理)。
 
@@ -86,7 +86,7 @@ Dockge 可直接使用上述 Compose。默认访问 `http://NAS地址:8027`。�
 
 高级使用如需改变容器内目录或日志级别，须在 Compose 的 `environment` 显式覆盖。
 
-镜像自带 Docker 健康检查：每 30 秒请求容器自身的 `/api/health`，超时 10 秒，启动宽限 60 秒，连续失败 3 次标记为 `unhealthy`。它不访问外网，不需要在应用或 NAS 定时任务中重复添加；单凭 `unhealthy` 状态不会自动重启容器。
+镜像自带 Docker 健康检查：每 30 秒请求容器自身的 `/api/health`，同时验证 TGFlow API 身份，避免其他服务返回 200 导致误报。超时 10 秒，启动宽限 60 秒，连续失败 3 次标记为 `unhealthy`。检查不访问外网，无需另建定时任务；单凭 `unhealthy` 不会自动重启。Java 或 Nginx 任一进程退出时，入口脚本会结束整个容器，交由现有 `restart: unless-stopped` 策略处理。
 
 需要额外跨域前端或固定 Cookie 策略时，在 Compose 的 `environment` 中显式添加 `HTTP_ALLOWED_ORIGINS` 或 `HTTP_SECURE_COOKIES`；精简文件不再转发这两个变量，仅写入宿主机 `.env` 不会生效。dev 已移除分享后台的启动和下载接入，`SHARE_ENABLED=true`、旧数据库设置或 qBittorrent 环境变量均无法开启。详见 [分享与 BT 禁用说明](docs/dev-guide.md#分享与-bt-永久禁用)。
 

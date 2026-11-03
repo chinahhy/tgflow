@@ -127,7 +127,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public Future<Void> initHttpServer() {
-        int port = config().getInteger("http.port", 8028);
+        int port = config().getInteger("http.port", 18028);
         String host = Config.HTTP_HOST;
         HttpServerOptions options = new HttpServerOptions()
                 .setHost(host)
@@ -186,7 +186,10 @@ public class HttpVerticle extends AbstractVerticle {
         HealthChecks hc = HealthChecks.create(vertx);
         hc.register("http-server", Promise::complete);
 
-        router.get("/health").handler(HealthCheckHandler.createWithHealthChecks(hc));
+        router.get("/health").handler(ctx -> {
+            ctx.response().putHeader("X-TGFlow-Service", "tgflow-api");
+            ctx.next();
+        }).handler(HealthCheckHandler.createWithHealthChecks(hc));
         router.get("/version").handler(ctx -> ctx.json(new JsonObject().put("version", Start.VERSION)));
         router.get("/auth/bootstrap/status").handler(this::handleBootstrapStatus);
         router.post("/auth/bootstrap").handler(this::handleBootstrap);

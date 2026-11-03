@@ -51,7 +51,7 @@ COPY --chown=tf:tf ./nginx.conf.template /etc/nginx/nginx.conf.template
 EXPOSE $NGINX_PORT
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -fsS --max-time 8 "http://127.0.0.1:${NGINX_PORT}/api/health" >/dev/null || exit 1
+    CMD identity="$(curl -fsS --max-time 8 --output /dev/null --write-out '%header{x-tgflow-service}' "http://127.0.0.1:${NGINX_PORT}/api/health")" && test "$identity" = tgflow-api
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/bin/sh", "./entrypoint.sh"]

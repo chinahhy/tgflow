@@ -11,6 +11,8 @@ JAVA_PID=""
 NGINX_PID=""
 
 cleanup() {
+    exit_status=${1:-0}
+    trap '' TERM INT
     echo "Cleaning up processes..."
 
     # Check and kill each process individually
@@ -23,7 +25,7 @@ cleanup() {
 
     wait || true
     echo "All processes have been terminated"
-    exit 0
+    exit "$exit_status"
 }
 
 setup_permissions() {
@@ -63,7 +65,7 @@ start_services() {
 }
 
 # Set up signal handlers
-trap cleanup TERM INT
+trap 'cleanup 0' TERM INT
 
 # Replace nginx.conf.template with environment variables
 envsubst '$NGINX_PORT' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
@@ -74,5 +76,12 @@ setup_permissions
 # Start services
 start_services
 
-# Wait for all services to complete
-wait
+# Alpine ash supports waiting for either explicit child, including one that has
+# already exited. Stop its sibling instead of leaving a half-running container.
+service_status=0
+wait -n "$JAVA_PID" "$NGINX_PID" || service_status=$?
+echo "A required service exited (status $service_status); stopping container..."
+if [ "$service_status" -eq 0 ]; then
+    service_status=1
+fi
+cleanup "$service_status"

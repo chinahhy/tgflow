@@ -21,7 +21,10 @@ class HttpRouterSmokeTest {
                                 server.actualPort(), "127.0.0.1", "/health")
                         .compose(request -> request.send()))
                 .compose(response -> response.body().map(body -> {
-                    context.verify(() -> assertEquals(200, response.statusCode(), body.toString()));
+                    context.verify(() -> {
+                        assertEquals(200, response.statusCode(), body.toString());
+                        assertEquals("tgflow-api", response.getHeader("X-TGFlow-Service"));
+                    });
                     return body;
                 }))
                 .onComplete(context.succeedingThenComplete());

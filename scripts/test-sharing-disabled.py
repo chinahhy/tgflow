@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the dev image cannot start platform sharing or qBittorrent, even with enabled legacy settings and host port 8080 already occupied."""
+"""Verify sharing stays disabled with host ports 8080 and 8028 occupied."""
 import argparse
 import base64
 import http.server
@@ -28,6 +28,17 @@ class Tripwire(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, *_):
         pass
+
+
+class MusicTripwire(Tripwire):
+    def do_GET(self):
+        self.server.hits.append((self.command, self.path))
+        body = json.dumps({"code": "200", "msg": "ok", "data": {"status": "up"}}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
 
 class Client:
@@ -96,7 +107,7 @@ def verify_case(image, server, malformed):
             subprocess.run([*command, image], check=True, capture_output=True)
             client = Client(base)
             wait_for_health(client)
-            assert Client("http://127.0.0.1:8028").request("/health")[0] == 200, "Internal API did not start on 8028"
+            assert Client("http://127.0.0.1:18028").request("/health")[0] == 200, "Internal API did not start on 18028"
             logs = subprocess.check_output(["docker", "logs", container], stderr=subprocess.STDOUT).decode()
             match = re.search(r"one-time bootstrap code \(expires in 15 minutes\): (\S+)", logs)
             assert match, "Missing disposable bootstrap code"
@@ -160,7 +171,7 @@ def verify_case(image, server, malformed):
             assert client.request("/api/files?downloadStatus=completed")[0] == 200
             time.sleep(2)
             assert server.hits == [], f"Unexpected platform/qBittorrent requests: {server.hits}"
-            print(f"Sharing disabled ({'malformed' if malformed else 'enabled'} legacy settings): APIs blocked, no platform/qBittorrent requests; zero-env Telegram configuration saved and restored on /data, legacy path and non-root ownership verified; host mode starts on 8027/8028 with 8080 occupied")
+            print(f"Sharing disabled ({'malformed' if malformed else 'enabled'} legacy settings): APIs blocked, no platform/qBittorrent requests; zero-env Telegram configuration saved and restored on /data, legacy path and non-root ownership verified; host mode starts on 8027/18028 with 8080 and 8028 occupied")
         except Exception:
             logs = subprocess.run(["docker", "logs", container], capture_output=True, text=True)
             print("\n".join(line for line in (logs.stdout + logs.stderr).splitlines()
@@ -174,18 +185,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True)
     args = parser.parse_args()
-    # Simulate the NAS service that caused the old internal API to fail under host networking.
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", 8080), Tripwire)
-    server.hits = []
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
+    servers, threads = [], []
     try:
+        # The music service returns 200 on /health, unlike the original 8080 tripwire.
+        for port, handler in [(8080, Tripwire), (8028, MusicTripwire)]:
+            server = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+            server.hits = []
+            servers.append(server)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            threads.append(thread)
+            thread.start()
         for malformed in [False, True]:
-            verify_case(args.image, server, malformed)
+            verify_case(args.image, servers[0], malformed)
+        assert servers[1].hits == [], f"Requests leaked to music service: {servers[1].hits}"
     finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
+        for server in servers:
+            server.shutdown()
+            server.server_close()
+        for thread in threads:
+            thread.join(timeout=5)
 
 
 if __name__ == "__main__":

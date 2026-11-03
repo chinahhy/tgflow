@@ -8,8 +8,8 @@
 
 ```bash
 npm ci
-export NEXT_PUBLIC_API_URL=http://localhost:8028
-export NEXT_PUBLIC_WS_URL=ws://localhost:8028/ws
+export NEXT_PUBLIC_API_URL=http://localhost:18028
+export NEXT_PUBLIC_WS_URL=ws://localhost:18028/ws
 npm run check
 npx playwright install chromium
 npm run test:e2e

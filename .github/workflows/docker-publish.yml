@@ -107,10 +107,12 @@ jobs:
             test -s "$RUNNER_TEMP/tgflow-legacy-$mode/data.db"
             docker rm -f tgflow-secure
           done
-      - name: Verify host startup with 8080 occupied and sharing disabled
+      - name: Verify host startup with old ports occupied and sharing disabled
         run: |
           docker stop tgflow-smoke
           python3 scripts/test-sharing-disabled.py --image tgflow:ci
+      - name: Verify health identity and required service exits
+        run: python3 scripts/test-container-lifecycle.py --image tgflow:ci
       - name: Determine branch tag and Docker Hub readiness
         id: release
         env:
@@ -148,9 +150,9 @@ jobs:
       - name: Capture container failure details
         if: failure()
         run: |
-          for container_name in tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked tgflow-unhealthy; do
+          for container_name in tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked tgflow-unhealthy tgflow-lifecycle; do
             docker logs "$container_name" 2>&1 | sed '/one-time bootstrap code/d' || true
           done
       - name: Remove smoke-test container
         if: always()
-        run: docker rm -f tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked tgflow-unhealthy || true
+        run: docker rm -f tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked tgflow-unhealthy tgflow-lifecycle || true
