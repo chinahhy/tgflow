@@ -126,6 +126,12 @@ jobs:
           docker push "$image"
           docker buildx imagetools inspect "$image"
           echo "Published: $image" >> "$GITHUB_STEP_SUMMARY"
+      - name: Capture container failure details
+        if: failure()
+        run: |
+          for container_name in tgflow-smoke tgflow-secure tgflow-https-proxy; do
+            docker logs "$container_name" 2>&1 | sed '/one-time bootstrap code/d' || true
+          done
       - name: Remove smoke-test container
         if: always()
         run: docker rm -f tgflow-smoke tgflow-secure tgflow-https-proxy || true

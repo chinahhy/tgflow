@@ -167,9 +167,9 @@ public class HttpVerticle extends AbstractVerticle {
                 .setCookieSameSite(CookieSameSite.STRICT)
                 .setCookieSecureFlag(false);
         router.route()
+                .handler(BodyHandler.create().setBodyLimit(Config.HTTP_BODY_LIMIT_BYTES))
                 // Never mutate a shared handler's cookie flag while requests are in flight.
-                .handler(ctx -> (secureCookies(ctx) ? secureSessionHandler : plainSessionHandler).handle(ctx))
-                .handler(BodyHandler.create().setBodyLimit(Config.HTTP_BODY_LIMIT_BYTES));
+                .handler(ctx -> (secureCookies(ctx) ? secureSessionHandler : plainSessionHandler).handle(ctx));
 
         if (!originPolicy.allowedOrigins().isEmpty()) {
             CorsHandler corsHandler = CorsHandler.create()
