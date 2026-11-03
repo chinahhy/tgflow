@@ -112,9 +112,12 @@ def main():
     status, _, headers = https.request("/api/auth/bootstrap", credentials)
     assert status == 201, f"HTTPS bootstrap rejected with status {status}"
     assert_cookies(headers, https_secure)
+    status, body, _ = https.request("/api/auth/session")
+    assert status == 200, f"Session immediately after setup: {status}, {body}"
     assert https.request("/api/auth/bootstrap/status")[1] == {"required": False}
     assert https.request("/api/auth/bootstrap", credentials)[0] == 404
-    assert https.request("/api/auth/session")[0] == 200
+    status, body, _ = https.request("/api/auth/session")
+    assert status == 200, f"Session after rejected duplicate setup: {status}, {body}"
     https.assert_legacy_session(https_secure)
     assert https.request("/api/auth/logout", {})[0] == 403
     assert https.request("/api/auth/logout", {}, headers={"X-CSRF-Token": https.csrf()})[0] == 204

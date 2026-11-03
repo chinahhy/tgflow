@@ -59,7 +59,12 @@ class AdminAuthServiceTest {
                                 "wrong-token"
                         ));
                     });
-                    return service.authenticate(session.sessionToken())
+                    return service.bootstrap("other-owner", "correct horse battery staple".toCharArray(), true)
+                            .map(true).recover(failure -> rejectedSetup(context, failure))
+                            .compose(created -> {
+                                context.verify(() -> assertFalse(created));
+                                return service.authenticate(session.sessionToken());
+                            })
                             .compose(principal -> service.logout(principal))
                             .compose(_ -> service.authenticate(session.sessionToken())
                                     .map(_ -> false)

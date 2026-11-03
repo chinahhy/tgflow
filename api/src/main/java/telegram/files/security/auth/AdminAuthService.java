@@ -465,21 +465,23 @@ public final class AdminAuthService {
         // A stable primary key makes first-admin creation a database-enforced
         // singleton, even when different usernames race on separate connections.
         String accountId = INITIAL_ADMIN_ID;
-        return pool.withTransaction(connection -> countAdmins(connection)
-                        .compose(count -> {
-                            if (count != 0) {
-                                return Future.failedFuture(bootstrapUnavailable());
-                            }
-                            return connection.preparedQuery(sql("""
-                                            INSERT INTO admin_account
-                                                (id, username, password_hash, password_parameters,
-                                                 status, session_version, created_at, updated_at)
-                                            VALUES (?, ?, ?, ?, 'ACTIVE', 0, ?, ?)
-                                            """))
-                                    .execute(Tuple.of(accountId, username, passwordHash.hash(),
-                                            passwordHash.parameters(), now, now))
-                                    .mapEmpty();
-                        }))
+        // No explicit transaction is needed for a single INSERT. In particular,
+        // rejecting a duplicate setup must not roll back existing session writes
+        // on a reused SQLite connection.
+        return adminCount().compose(count -> {
+                    if (count != 0) {
+                        return Future.failedFuture(bootstrapUnavailable());
+                    }
+                    return pool.preparedQuery(sql("""
+                                    INSERT INTO admin_account
+                                        (id, username, password_hash, password_parameters,
+                                         status, session_version, created_at, updated_at)
+                                    VALUES (?, ?, ?, ?, 'ACTIVE', 0, ?, ?)
+                                    """))
+                            .execute(Tuple.of(accountId, username, passwordHash.hash(),
+                                    passwordHash.parameters(), now, now))
+                            .mapEmpty();
+                })
                 .recover(failure -> adminCount().compose(count -> Future.failedFuture(
                         count > 0 ? bootstrapUnavailable() : failure
                 )))
@@ -592,12 +594,6 @@ public final class AdminAuthService {
 
     private Future<Long> adminCount() {
         return pool.query("SELECT COUNT(*) AS admin_count FROM admin_account")
-                .execute()
-                .map(rows -> number(first(rows), "admin_count"));
-    }
-
-    private static Future<Long> countAdmins(SqlConnection connection) {
-        return connection.query("SELECT COUNT(*) AS admin_count FROM admin_account")
                 .execute()
                 .map(rows -> number(first(rows), "admin_count"));
     }
