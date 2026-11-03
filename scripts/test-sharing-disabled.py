@@ -76,7 +76,8 @@ def verify_case(image, server, malformed):
         }
         if malformed:
             environment.update(SEED_PLATFORM_URL="invalid legacy URL", QBITTORRENT_URL="invalid legacy URL",
-                SHARE_CONCURRENCY="invalid", SHARED_ROOT="/app/data/account/overlap")
+                SHARE_CONCURRENCY="invalid", SHARED_ROOT="/app/data/account/overlap",
+                PEER_LISTEN_PORT="0", SHARE_STATISTICS_ROLLOUT_PERCENT="101")
         command = ["docker", "run", "-d", "--name", container, "--network", "host",
             "-v", f"{state}:/app/data", "-v", f"{root}/downloads:/downloads"]
         for name, value in environment.items():

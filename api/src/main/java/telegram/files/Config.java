@@ -88,18 +88,10 @@ public class Config {
             System.getenv("FILE_READS_PER_MINUTE"), 120
     );
 
-    public static final int SHARE_HEARTBEAT_INTERVAL_SECONDS = Convert.toInt(
-            System.getenv("SHARE_HEARTBEAT_INTERVAL_SECONDS"), 30
-    );
-
-    public static final int PEER_LISTEN_PORT = Convert.toInt(
-            System.getenv("PEER_LISTEN_PORT"), 51413
-    );
-
-    public static final int SHARE_STATISTICS_ROLLOUT_PERCENT = Convert.toInt(
-            System.getenv("SHARE_STATISTICS_ROLLOUT_PERCENT"),
-            "prod".equals(APP_ENV) ? 0 : 100
-    );
+    // Inert protocol defaults retained for upstream classes; no sharing runtime is deployed.
+    public static final int SHARE_HEARTBEAT_INTERVAL_SECONDS = 30;
+    public static final int PEER_LISTEN_PORT = 51413;
+    public static final int SHARE_STATISTICS_ROLLOUT_PERCENT = 0;
 
     public static final String OPENAI_MODEL = StrUtil.blankToDefault(System.getenv("OPENAI_MODEL"), ChatModel.GPT_4O_MINI.asString());
 
@@ -126,14 +118,6 @@ public class Config {
             || FILE_READS_PER_MINUTE <= 0) {
             throw new RuntimeException("HTTP limits must be positive");
         }
-        if (SHARE_HEARTBEAT_INTERVAL_SECONDS < 5 || SHARE_HEARTBEAT_INTERVAL_SECONDS > 600
-            || PEER_LISTEN_PORT < 1 || PEER_LISTEN_PORT > 65535) {
-            throw new RuntimeException("Share heartbeat interval or Peer listen port is invalid");
-        }
-        if (SHARE_STATISTICS_ROLLOUT_PERCENT < 0 || SHARE_STATISTICS_ROLLOUT_PERCENT > 100) {
-            throw new RuntimeException("SHARE_STATISTICS_ROLLOUT_PERCENT must be between 0 and 100");
-        }
-
         if (!FileUtil.exist(APP_ROOT)) {
             FileUtil.mkdir(APP_ROOT);
         }
