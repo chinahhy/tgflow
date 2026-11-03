@@ -72,16 +72,12 @@ public class Config {
             System.getenv("HTTP_HOST"), "0.0.0.0"
     );
 
-    public static final boolean HTTP_SECURE_COOKIES = Convert.toBool(
-            System.getenv("HTTP_SECURE_COOKIES"),
-            "prod".equals(APP_ENV)
-    );
+    public static final telegram.files.security.RequestSecurity.CookieMode HTTP_SECURE_COOKIES =
+            telegram.files.security.RequestSecurity.CookieMode.parse(System.getenv("HTTP_SECURE_COOKIES"));
 
     public static final Set<String> HTTP_ALLOWED_ORIGINS = parseCsv(
-            StrUtil.blankToDefault(
-                    System.getenv("HTTP_ALLOWED_ORIGINS"),
-                    "prod".equals(APP_ENV) ? "" : "http://localhost:3000,http://127.0.0.1:3000"
-            )
+            StrUtil.blankToDefault(System.getenv("HTTP_ALLOWED_ORIGINS"),
+                    "prod".equals(APP_ENV) ? "" : "http://localhost:3000,http://127.0.0.1:3000")
     );
 
     public static final int AUTH_LOGIN_ATTEMPTS_PER_MINUTE = Convert.toInt(

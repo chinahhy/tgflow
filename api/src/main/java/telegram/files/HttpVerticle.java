@@ -40,6 +40,7 @@ import telegram.files.repository.SettingAutoRecords;
 import telegram.files.repository.SettingKey;
 import telegram.files.repository.SettingRecord;
 import telegram.files.security.OriginPolicy;
+import telegram.files.security.RequestSecurity;
 import telegram.files.security.SafePathResolver;
 import telegram.files.security.SlidingWindowRateLimiter;
 import telegram.files.security.auth.AdminAuthModels.AdminPrincipal;
@@ -49,7 +50,6 @@ import telegram.files.security.auth.AdminAuthModels.IssuedSession;
 import telegram.files.security.auth.AdminAuthService;
 import telegram.files.share.UnifiedFileDownloadService;
 
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -158,12 +158,17 @@ public class HttpVerticle extends AbstractVerticle {
         Router router = Router.router(vertx);
 
         SessionStore sessionStore = LocalSessionStore.create(vertx, SESSION_COOKIE_NAME);
-        SessionHandler sessionHandler = SessionHandler.create(sessionStore)
+        SessionHandler secureSessionHandler = SessionHandler.create(sessionStore)
                 .setSessionCookieName(SESSION_COOKIE_NAME)
                 .setCookieSameSite(CookieSameSite.STRICT)
-                .setCookieSecureFlag(Config.HTTP_SECURE_COOKIES);
+                .setCookieSecureFlag(true);
+        SessionHandler plainSessionHandler = SessionHandler.create(sessionStore)
+                .setSessionCookieName(SESSION_COOKIE_NAME)
+                .setCookieSameSite(CookieSameSite.STRICT)
+                .setCookieSecureFlag(false);
         router.route()
-                .handler(sessionHandler)
+                // Never mutate a shared handler's cookie flag while requests are in flight.
+                .handler(ctx -> (secureCookies(ctx) ? secureSessionHandler : plainSessionHandler).handle(ctx))
                 .handler(BodyHandler.create().setBodyLimit(Config.HTTP_BODY_LIMIT_BYTES));
 
         if (!originPolicy.allowedOrigins().isEmpty()) {
@@ -178,7 +183,10 @@ public class HttpVerticle extends AbstractVerticle {
                     .allowedHeader("Content-Type")
                     .allowedHeader("X-CSRF-Token");
             originPolicy.allowedOrigins().forEach(corsHandler::addOrigin);
-            router.route().handler(corsHandler);
+            router.route().handler(ctx -> {
+                if (isSameOriginRequest(ctx, ctx.request().getHeader("Origin"))) ctx.next();
+                else corsHandler.handle(ctx);
+            });
         }
         router.route().handler(this::handleOrigin);
 
@@ -342,8 +350,7 @@ public class HttpVerticle extends AbstractVerticle {
     private void handleOrigin(RoutingContext ctx) {
         String origin = ctx.request().getHeader("Origin");
         boolean configuredOrigin = originPolicy.isAllowed(origin);
-        boolean implicitSameOrigin = originPolicy.allowedOrigins().isEmpty()
-                                     && isSameOriginRequest(ctx, origin);
+        boolean implicitSameOrigin = isSameOriginRequest(ctx, origin);
         if (!configuredOrigin && !implicitSameOrigin) {
             respondJson(ctx, 403, "ORIGIN_NOT_ALLOWED", "Request origin is not allowed");
             return;
@@ -351,33 +358,18 @@ public class HttpVerticle extends AbstractVerticle {
         ctx.next();
     }
 
-    private static boolean isSameOriginRequest(RoutingContext ctx, String rawOrigin) {
-        if (StrUtil.isBlank(rawOrigin)) {
-            return true;
-        }
-        try {
-            URI origin = URI.create(rawOrigin);
-            String directHost = ctx.request().remoteAddress() == null
-                    ? "unknown"
-                    : ctx.request().remoteAddress().host();
-            boolean trustedProxy = OriginPolicy.isLoopback(directHost);
-            String expectedScheme = trustedProxy
-                    ? ctx.request().getHeader("X-Forwarded-Proto")
-                    : null;
-            expectedScheme = StrUtil.blankToDefault(expectedScheme, "http");
-            String expectedAuthority = trustedProxy
-                    ? ctx.request().getHeader("X-Forwarded-Host")
-                    : null;
-            expectedAuthority = StrUtil.blankToDefault(
-                    expectedAuthority,
-                    ctx.request().getHeader("Host")
-            );
-            return expectedAuthority != null
-                   && expectedScheme.equalsIgnoreCase(origin.getScheme())
-                   && expectedAuthority.equalsIgnoreCase(origin.getRawAuthority());
-        } catch (IllegalArgumentException exception) {
-            return false;
-        }
+    private static RequestSecurity requestSecurity(RoutingContext ctx) {
+        String peer = ctx.request().remoteAddress() == null ? "unknown" : ctx.request().remoteAddress().host();
+        return new RequestSecurity(peer, ctx.request().scheme(), ctx.request().getHeader("Host"),
+                ctx.request().getHeader("X-Forwarded-Proto"), ctx.request().getHeader("X-Forwarded-Host"));
+    }
+
+    private static boolean secureCookies(RoutingContext ctx) {
+        return Config.HTTP_SECURE_COOKIES.secureFor(requestSecurity(ctx).scheme());
+    }
+
+    private static boolean isSameOriginRequest(RoutingContext ctx, String origin) {
+        return requestSecurity(ctx).isSameOrigin(origin);
     }
 
     private void handleBootstrapStatus(RoutingContext ctx) {
@@ -621,7 +613,7 @@ public class HttpVerticle extends AbstractVerticle {
         ctx.response().addCookie(
                 Cookie.cookie(ADMIN_SESSION_COOKIE_NAME, session.sessionToken())
                         .setHttpOnly(true)
-                        .setSecure(Config.HTTP_SECURE_COOKIES)
+                        .setSecure(secureCookies(ctx))
                         .setSameSite(CookieSameSite.STRICT)
                         .setPath("/")
                         .setMaxAge(maxAgeSeconds)
@@ -629,7 +621,7 @@ public class HttpVerticle extends AbstractVerticle {
         ctx.response().addCookie(
                 Cookie.cookie(CSRF_COOKIE_NAME, session.csrfToken())
                         .setHttpOnly(false)
-                        .setSecure(Config.HTTP_SECURE_COOKIES)
+                        .setSecure(secureCookies(ctx))
                         .setSameSite(CookieSameSite.STRICT)
                         .setPath("/")
                         .setMaxAge(maxAgeSeconds)
@@ -640,7 +632,7 @@ public class HttpVerticle extends AbstractVerticle {
         ctx.response().addCookie(
                 Cookie.cookie(ADMIN_SESSION_COOKIE_NAME, "")
                         .setHttpOnly(true)
-                        .setSecure(Config.HTTP_SECURE_COOKIES)
+                        .setSecure(secureCookies(ctx))
                         .setSameSite(CookieSameSite.STRICT)
                         .setPath("/")
                         .setMaxAge(0)
@@ -648,7 +640,7 @@ public class HttpVerticle extends AbstractVerticle {
         ctx.response().addCookie(
                 Cookie.cookie(CSRF_COOKIE_NAME, "")
                         .setHttpOnly(false)
-                        .setSecure(Config.HTTP_SECURE_COOKIES)
+                        .setSecure(secureCookies(ctx))
                         .setSameSite(CookieSameSite.STRICT)
                         .setPath("/")
                         .setMaxAge(0)
@@ -753,41 +745,14 @@ public class HttpVerticle extends AbstractVerticle {
         if (originPolicy.isAllowed(origin)) {
             return true;
         }
-        return originPolicy.allowedOrigins().isEmpty()
-               && isSameOriginHandshake(handshake, origin);
+        return isSameOriginHandshake(handshake, origin);
     }
 
-    private static boolean isSameOriginHandshake(ServerWebSocketHandshake handshake, String rawOrigin) {
-        if (StrUtil.isBlank(rawOrigin)) {
-            return true;
-        }
-        try {
-            URI origin = URI.create(rawOrigin);
-            String directHost = handshake.remoteAddress() == null
-                    ? "unknown"
-                    : handshake.remoteAddress().host();
-            boolean trustedProxy = OriginPolicy.isLoopback(directHost);
-            String expectedScheme = trustedProxy
-                    ? handshake.headers().get("X-Forwarded-Proto")
-                    : null;
-            expectedScheme = StrUtil.blankToDefault(expectedScheme, handshake.scheme());
-            expectedScheme = StrUtil.blankToDefault(
-                    expectedScheme,
-                    handshake.isSsl() ? "https" : "http"
-            );
-            String expectedAuthority = trustedProxy
-                    ? handshake.headers().get("X-Forwarded-Host")
-                    : null;
-            expectedAuthority = StrUtil.blankToDefault(
-                    expectedAuthority,
-                    handshake.headers().get("Host")
-            );
-            return expectedAuthority != null
-                   && expectedScheme.equalsIgnoreCase(origin.getScheme())
-                   && expectedAuthority.equalsIgnoreCase(origin.getRawAuthority());
-        } catch (IllegalArgumentException exception) {
-            return false;
-        }
+    private static boolean isSameOriginHandshake(ServerWebSocketHandshake handshake, String origin) {
+        String peer = handshake.remoteAddress() == null ? "unknown" : handshake.remoteAddress().host();
+        return new RequestSecurity(peer, handshake.isSsl() ? "https" : "http", handshake.headers().get("Host"),
+                handshake.headers().get("X-Forwarded-Proto"), handshake.headers().get("X-Forwarded-Host"))
+                .isSameOrigin(origin);
     }
 
     private static void rejectWebSocket(

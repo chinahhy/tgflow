@@ -52,14 +52,14 @@ jobs:
             -e HTTP_SECURE_COOKIES=false -e SHARE_ENABLED=false \
             -v "$RUNNER_TEMP/tgflow-state:/app/data" \
             -v "$RUNNER_TEMP/tgflow-downloads:/downloads" \
-            -p 127.0.0.1:6543:80 tgflow:ci
+            -p 127.0.0.1:8026:8026 tgflow:ci
           for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:6543/api/health > /dev/null; then break; fi
+            if curl --fail --silent http://127.0.0.1:8026/api/health > /dev/null; then break; fi
             sleep 2
           done
-          curl --fail --silent http://127.0.0.1:6543/api/health
-          curl --fail --silent http://127.0.0.1:6543/ | grep -q TGFlow
-          curl --fail --silent http://127.0.0.1:6543/api/auth/bootstrap/status | grep -q true
+          curl --fail --silent http://127.0.0.1:8026/api/health
+          curl --fail --silent http://127.0.0.1:8026/ | grep -q TGFlow
+          curl --fail --silent http://127.0.0.1:8026/api/auth/bootstrap/status | grep -q true
           docker exec tgflow-smoke sh -c 'test -f /app/data/data.db && test -d /downloads'
       - name: Test HTTPS reverse proxy and Secure cookies
         run: |
@@ -68,20 +68,30 @@ jobs:
             -subj '/CN=tgflow-proxy-test' -addext 'subjectAltName=IP:127.0.0.1' \
             -keyout "$RUNNER_TEMP/tgflow-proxy-tls/key.pem" \
             -out "$RUNNER_TEMP/tgflow-proxy-tls/cert.pem" > /dev/null 2>&1
-          docker run -d --name tgflow-secure \
-            -e APP_ENV=prod -e APP_ROOT=/app/data -e DOWNLOAD_ROOT=/downloads \
-            -e TELEGRAM_API_ID=1 -e TELEGRAM_API_HASH=test-only-placeholder \
-            -e HTTP_SECURE_COOKIES=true -e SHARE_ENABLED=false \
-            -p 127.0.0.1:6544:80 tgflow:ci
           docker run -d --name tgflow-https-proxy --network host --entrypoint nginx \
             -v "$GITHUB_WORKSPACE/.github/fixtures/https-proxy.conf:/etc/nginx/nginx.conf:ro" \
             -v "$RUNNER_TEMP/tgflow-proxy-tls:/test-tls:ro" \
             tgflow:ci -g 'daemon off;'
-          if ! python3 scripts/test-https-proxy.py --container tgflow-secure \
-            --ca-file "$RUNNER_TEMP/tgflow-proxy-tls/cert.pem"; then
-            docker logs tgflow-https-proxy
-            exit 1
-          fi
+          for mode in auto true false; do
+            cookie_env=()
+            extra_origin=()
+            if [ "$mode" != auto ]; then cookie_env+=( -e "HTTP_SECURE_COOKIES=$mode" ); fi
+            if [ "$mode" = true ]; then
+              cookie_env+=( -e HTTP_ALLOWED_ORIGINS=http://legacy.example.test:6543 )
+              extra_origin+=( --extra-origin http://legacy.example.test:6543 )
+            fi
+            docker run -d --name tgflow-secure \
+              -e APP_ENV=prod -e APP_ROOT=/app/data -e DOWNLOAD_ROOT=/downloads \
+              -e TELEGRAM_API_ID=1 -e TELEGRAM_API_HASH=test-only-placeholder \
+              -e SHARE_ENABLED=false "${cookie_env[@]}" \
+              -p 127.0.0.1:18026:8026 tgflow:ci
+            if ! python3 scripts/test-https-proxy.py --container tgflow-secure \
+              --ca-file "$RUNNER_TEMP/tgflow-proxy-tls/cert.pem" --cookie-mode "$mode" "${extra_origin[@]}"; then
+              docker logs tgflow-https-proxy
+              exit 1
+            fi
+            docker rm -f tgflow-secure
+          done
       - name: Determine branch tag and Docker Hub readiness
         id: release
         env:

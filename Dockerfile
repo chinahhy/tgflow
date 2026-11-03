@@ -24,7 +24,7 @@ ARG TARGETARCH
 ENV JAVA_HOME=/jre \
     PATH="/jre/bin:$PATH" \
     LANG=C.UTF-8 \
-    NGINX_PORT=80
+    NGINX_PORT=8026
 
 RUN --mount=type=cache,target=/var/cache/apk \
     addgroup -S tf && \

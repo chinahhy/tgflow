@@ -37,11 +37,11 @@ TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可
 
 ## Docker Compose 部署
 
-适用于极空间 Z4Pro、Dockge 及一般 AMD64 Linux 主机：单容器、SQLite、端口 `6543`、时区 `Asia/Shanghai`、`restart: unless-stopped`。不需要 PostgreSQL、MySQL 或 qBittorrent。
+适用于极空间 Z4Pro、Dockge 及一般 AMD64 Linux 主机：单容器、SQLite、默认端口 `8026`、时区 `Asia/Shanghai`、`restart: unless-stopped`。基础 Telegram 下载不需要 PostgreSQL、MySQL 或 qBittorrent。
 
 1. 在新的部署目录放入 [docker-compose.yaml](docker-compose.yaml) 和 [.env.example](.env.example)，将后者复制为 `.env`。
 2. 填写实际 Docker Hub 用户名、Telegram API ID / Hash，并确认镜像已经发布。
-3. 检查 `HTTP_ALLOWED_ORIGINS` 与实际访问地址一致。
+3. 确认 `PORT` 对应的主机端口可用；普通 HTTP 或 HTTPS 反代无需填写来源和 Cookie 参数。
 4. 启动：
 
 ```bash
@@ -53,25 +53,17 @@ docker compose up -d
 docker compose logs -f tgflow
 ```
 
-Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例访问地址为 `http://10.0.0.104:6543`。若已有服务占用端口，请为 TGFlow 选择另一个端口，并同步修改 `HTTP_ALLOWED_ORIGINS`。
+Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例访问地址为 `http://NAS地址:8026`。若已有服务占用端口，修改 `PORT` 并让反代使用该主机端口即可，容器内部仍为 `8026`。
 
 **已有官方 Telegram Files 实例时，请使用新的 Compose 项目名和独立数据目录。不要让两个实例同时写入同一 SQLite 数据库或 Telegram 会话目录。** 本项目的仓库构建不需要操作已有 NAS 容器。
 
 ### HTTP 与 HTTPS 登录
 
-局域网 HTTP 在 `.env` 中使用：
+默认自动识别协议与当前访问来源，无需填写 `HTTP_ALLOWED_ORIGINS` 或 `HTTP_SECURE_COOKIES`。局域网 HTTP 使用普通 Cookie，HTTPS 域名使用 Secure Cookie；账号会话与旧的 Telegram Web 会话采用一致策略。即使以前配置过局域网来源，新域名下的同源访问也会自动放行。
 
-```yaml
-HTTP_SECURE_COOKIES=false
-```
+容器入口是 **HTTP 8026**，默认映射 **8026 → 8026**。Lucky 等外层反代负责 HTTPS，目标填写 `http://NAS地址:8026`；同一 Docker 网络中可使用 `http://tgflow:8026`。外层代理应保留原始 Host 或 `X-Forwarded-Host`（含端口）、设置实际 `X-Forwarded-Proto`，并支持 WebSocket。容器会保留有效的协议和原始主机信息。
 
-这适用于受信任局域网内的 **HTTP**。HTTP 无法发送 Secure Cookie，错误开启会导致登录后仍提示 `Authentication is required`。
-
-HTTPS 域名访问时，在 `.env` 设置 `HTTP_SECURE_COOKIES=true`，把 `HTTP_ALLOWED_ORIGINS` 设为完整来源。非默认端口必须包含在来源中，例如 `https://tgflow.example.com:6270`。这项开关只控制 Cookie 的 Secure 属性，不会给容器启用 HTTPS 监听。
-
-容器入口是 **HTTP 80**，默认宿主机映射 **6543 → 80**。Lucky 等外层反代负责 HTTPS，目标填写 `http://NAS地址:6543`；同一个 Docker 网络中可使用 `http://tgflow:80`。保留原始 Host（含外部端口）、设置 `X-Forwarded-Proto: https`，并开启 WebSocket 转发。容器 Nginx 对 API 和 WebSocket 保留有效的外层协议标记；外层代理须覆盖客户端传入的转发头。
-
-若页面能打开而登录返回 `ORIGIN_NOT_ALLOWED`，先核对来源的协议、域名、端口，不能只改 Cookie 开关。启用 Secure Cookie 后应通过 HTTPS 域名登录；HTTP IP 直连无法使用同一个安全 Cookie 会话。详见 [反向代理配置](docs/dev-guide.md#https-反向代理)。
+`HTTP_ALLOWED_ORIGINS` 只用于额外跨域前端；`HTTP_SECURE_COOKIES=true/false` 仍可显式覆盖自动策略。正常自用部署可省略它们。旧部署升级时，将 `6543:80` 改为 `8026:8026`；若想保留旧主机端口，可改为 `6543:8026`，并同步健康检查。原来固定的 Cookie 参数建议删除或改为 `auto`。详见 [反向代理配置](docs/dev-guide.md#https-反向代理)。
 
 ### 环境变量
 
@@ -80,17 +72,17 @@ HTTPS 域名访问时，在 `.env` 设置 `HTTP_SECURE_COOKIES=true`，把 `HTTP
 | `DOCKERHUB_USERNAME` | 实际 Docker Hub 用户名，仅用于选择镜像，不假定与 GitHub 相同 |
 | `IMAGE_TAG` | 本分支默认 `dev`，稳定版使用 main 分支的 Compose 与 `latest` |
 | `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` | 必填，Telegram 应用凭据 |
-| `PORT` | 主机端口，默认 `6543` |
+| `PORT` | 主机端口，默认 `8026`，容器入口 `8026` |
 | `CONFIG_DIR` | 应用状态目录，示例 `./config`，建议 SSD |
 | `DOWNLOAD_DIR` | 下载暂存与完成文件目录，默认 `./downloads`，建议 HDD |
 | `DATA_DIR` | 兼容旧配置；未设置 CONFIG_DIR 时作为应用状态目录 |
-| `HTTP_ALLOWED_ORIGINS` | 完整访问来源，包含协议和非默认端口，多个值用逗号分隔 |
-| `HTTP_SECURE_COOKIES` | HTTP 设为 `false`，HTTPS 域名访问设为 `true`，默认 `false` |
+| `HTTP_ALLOWED_ORIGINS` | 可省略；额外允许的跨域来源，多个值用逗号分隔；同源访问自动允许 |
+| `HTTP_SECURE_COOKIES` | 可省略；默认 `auto` 按访问协议决定，兼容显式 `true/false` |
 | `LOG_LEVEL` | 默认 `INFO` |
 | `TELEGRAM_LOG_LEVEL` | 默认 `0` |
 | `PUID` / `PGID` | 可选，挂载目录对应的用户和组 ID，默认 `0` |
 
-Compose 还固定配置 `TZ=Asia/Shanghai`、`APP_ENV=prod`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`DB_TYPE=sqlite`、`SHARE_ENABLED=false`。`HTTP_SECURE_COOKIES` 从 `.env` 读取。
+Compose 还固定配置 `TZ=Asia/Shanghai`、`APP_ENV=prod`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`DB_TYPE=sqlite`、`SHARE_ENABLED=false`。可选的 qBittorrent 下载／做种与平台分享模块完整保留，配置方式见 [dev 使用指南](docs/dev-guide.md#qbittorrent-保留情况)。
 
 上游仍支持外部数据库（`DB_TYPE`、`DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`）以及可选分享和 AI 配置；精简示例不会自动启用这些功能。完整运行参数以 `api/src/main/java/telegram/files/Config.java` 及 `share/ShareConfiguration.java` 为准。
 
@@ -161,7 +153,7 @@ PR 不执行镜像发布。`main` 只发布 `latest`，`dev` 只发布 `dev`。�
 
 ## 常见问题
 
-**登录后仍要求认证？** 检查访问协议与 `HTTP_SECURE_COOKIES`、允许来源、代理转发头及浏览器 Cookie 是否一致。
+**登录后仍要求认证？** 默认模式下先检查旧配置是否还固定了 `HTTP_SECURE_COOKIES=true/false`，以及反代是否传递原始主机和协议。自动模式无需手写域名来源。
 
 **为什么镜像拉取失败？** 检查 Docker Hub 用户名、标签及 Actions 发布记录。测试成功但缺少发布凭据时不会产生镜像。
 

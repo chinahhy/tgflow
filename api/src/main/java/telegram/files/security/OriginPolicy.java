@@ -26,7 +26,20 @@ public final class OriginPolicy {
     }
 
     public boolean isAllowed(String origin) {
-        return origin == null || origin.isBlank() || allowedOrigins.contains(normalize(origin));
+        if (origin == null || origin.isBlank()) return true;
+        try {
+            return allowedOrigins.contains(normalize(origin));
+        } catch (IllegalArgumentException invalid) {
+            return false;
+        }
+    }
+
+    public static boolean sameOrigin(String origin, String expected) {
+        try {
+            return normalize(origin).equals(normalize(expected));
+        } catch (IllegalArgumentException invalid) {
+            return false;
+        }
     }
 
     public Set<String> allowedOrigins() {
@@ -129,7 +142,7 @@ public final class OriginPolicy {
         String scheme = uri.getScheme();
         String host = uri.getHost();
         if (scheme == null || host == null || uri.getUserInfo() != null
-                || uri.getPath() != null && !uri.getPath().isEmpty()
+                || uri.getPath() != null && !uri.getPath().isEmpty() && !"/".equals(uri.getPath())
                 || uri.getQuery() != null || uri.getFragment() != null) {
             throw new IllegalArgumentException("Allowed origin must contain only scheme, host and port");
         }

@@ -33,8 +33,7 @@ DOCKERHUB_USERNAME=hoya0803
 IMAGE_TAG=dev
 CONFIG_DIR=/path/on/ssd/tgflow-dev/config
 DOWNLOAD_DIR=/path/on/hdd/tgflow-dev/downloads
-PORT=6544
-HTTP_ALLOWED_ORIGINS=http://你的NAS局域网地址:6544
+PORT=8026
 TELEGRAM_API_ID=填写自己的ID
 TELEGRAM_API_HASH=填写自己的Hash
 ```
@@ -85,24 +84,46 @@ docker compose -p tgflow-dev logs -f tgflow
 
 ## HTTPS 反向代理
 
-容器入口为 HTTP `80`，Compose 默认发布主机 `6543`。外层 Lucky 等反代接收 HTTPS，再转发到 `http://NAS地址:6543`；同网络容器间可转发到 `http://tgflow:80`。Java 的 `8080` 是内部 API，不用作完整 WebUI 的反代入口。
+容器和主机默认都使用 HTTP `8026`。Lucky 负责外层 HTTPS，后端填 `http://NAS地址:8026`；同网络容器间可用 `http://tgflow:8026`。Java 的 `8080` 仍是内部 API。外部域名监听 `6270` 等其他端口也可以，与容器端口不必相同。
 
-例如浏览器访问 `https://tgflow.example.com:6270`，`.env` 应设置：
+日常自用部署无需写 `HTTP_ALLOWED_ORIGINS`、`HTTP_SECURE_COOKIES`：
 
-```dotenv
-HTTP_SECURE_COOKIES=true
-HTTP_ALLOWED_ORIGINS=https://tgflow.example.com:6270
-```
+- 来源默认根据本次请求的原始主机、端口和协议自动识别。更换域名或改主机端口不再需要更新白名单。已有的局域网来源列表也不会阻止新域名的同源访问。
+- Cookie 默认为自动：HTTP 使用普通 Cookie，HTTPS 使用 Secure Cookie；管理员会话、CSRF Cookie 和 Telegram Web 会话保持一致。局域网 IP 的 HTTP 登录与域名的 HTTPS 登录可各自使用。
+- 外层反代保留 Host 或 `X-Forwarded-Host`（含端口），设置实际 `X-Forwarded-Proto` 并转发 WebSocket。容器保留有效的外部主机和协议，应用只接受本机 Nginx 传来的这些信息。
 
-将域名换成自己的实际地址。来源必须匹配协议、域名及非默认端口，不带页面路径。外层反代保留浏览器的 Host（含端口），覆盖设置 `X-Forwarded-Proto` 为实际协议，并启用 WebSocket。应用端口使用 HTTP；`HTTP_SECURE_COOKIES=true` 本身不会启用容器 TLS。
+如有特殊需求，可选参数仍兼容：
 
-容器 Nginx 会保留有效的外层 `http`／`https` 标记，未提供或无效值才回退到自身协议。API 与 WebSocket 使用一致逻辑，避免外层 HTTPS 在容器内被改写成 HTTP。
+| 参数 | 用途 |
+| --- | --- |
+| `HTTP_ALLOWED_ORIGINS` | 额外允许的跨域前端，多个来源以逗号分隔；不再作为当前同源地址的强制白名单 |
+| `HTTP_SECURE_COOKIES=auto` | 默认行为；可以直接省略 |
+| `HTTP_SECURE_COOKIES=true/false` | 显式固定 Cookie 属性；旧配置继续生效 |
 
-修改部署目录的 `.env` 后，用 `docker compose -p tgflow-dev up -d` 重建服务应用环境变量，单纯重启不能更新环境变量。启用 Secure Cookie 后统一通过 HTTPS 域名登录；HTTP IP 直连不能携带安全会话 Cookie。
+保留了登录、CSRF 与其他网站来源的拒绝规则，省去的是日常手填部署参数。
 
-“能打开页面但输入账号密码报错”时，查看 API 的错误码：`ORIGIN_NOT_ALLOWED` 表示访问来源校验失败，尚未进入密码校验；`AUTHENTICATION_REQUIRED` 表示没有有效会话。不要为解决域名来源错误而关闭 Secure Cookie。原有其他服务或 NAS 反代规则不需要随本项目开发而自动改动。
+### 从旧 dev 升级
 
-CI 会用同一个构建镜像再启动 HTTPS 外层代理和独立测试实例，验证 Secure Cookie 下的初始化、账号密码登录、会话、退出、CSRF、外部端口保留和 WSS 握手，并检查其他来源被拒绝。
+旧 Compose 的 `6543:80` 必须对齐新的容器端口：推荐改为 `8026:8026`，也可用 `6543:8026` 保留原来的主机端口。相应更新健康检查与 Lucky 的后端目标；端口调整不迁移或改写下载文件与数据库。
+
+删除旧部署中固定的 `HTTP_SECURE_COOKIES=true/false`，或改为 `auto`，即可使用自动模式。`HTTP_ALLOWED_ORIGINS` 可以删除；保留旧值也不会阻挡同源域名。修改部署配置后重新部署容器以应用环境变量，仅点普通重启不会更新变量。
+
+CI 对同一镜像分别测试默认自动模式、显式 true、显式 false，走真实 TLS 代理，并覆盖 Host 被外层改写、外部非默认端口、HTTP/HTTPS 登录、Cookie 属性、会话、CSRF 和 WS/WSS。显式模式还验证已有来源列表与自动同源访问能同时工作。
+
+## qBittorrent 保留情况
+
+原项目的 qBittorrent WebAPI 客户端、BT 下载、任务控制、做种和统计模块均保留。它属于可选的 telegram-seed / BT 模块，基础 Telegram 附件仍由 TDLib 下载。默认 Compose 的 `SHARE_ENABLED=false` 只关闭该模块，不删除代码。
+
+原项目采用容器环境变量配置 qBittorrent，未提供独立的 qBittorrent WebUI 设置表单。需要使用原有模块时，在 Compose 的 `environment` 中按原部署配置这些变量（仅写在宿主机 `.env` 而不传进容器不会生效）：
+
+| 变量 | 作用 |
+| --- | --- |
+| `QBITTORRENT_URL` | qBittorrent WebUI 的 HTTP(S) 地址 |
+| `QBITTORRENT_USERNAME` / `QBITTORRENT_PASSWORD` | WebAPI 登录凭据 |
+| `SHARED_ROOT` | TGFlow 可见的共享存储目录，建议位于 HDD，例如 `/downloads/shared` |
+| `QBITTORRENT_SHARED_ROOT` | 同一目录在 qBittorrent 容器中的路径，用于路径映射 |
+
+平台任务还沿用 `SHARE_ENABLED`、`SEED_PLATFORM_URL` 和原来的节点绑定流程。两个容器的共享目录必须对应同一主机存储。凭据应放在部署端，不提交到 Git。本轮保持这部分协议与任务逻辑不变，并运行其原有回归测试。
 
 ## 自动化怎么配置
 
