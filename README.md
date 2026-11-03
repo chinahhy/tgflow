@@ -76,13 +76,13 @@ Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例�
 | `CONFIG_DIR` | 应用状态目录，示例 `./config`，建议 SSD |
 | `DOWNLOAD_DIR` | 下载暂存与完成文件目录，默认 `./downloads`，建议 HDD |
 | `DATA_DIR` | 兼容旧配置；未设置 CONFIG_DIR 时作为应用状态目录 |
-| `HTTP_ALLOWED_ORIGINS` | 可省略；额外允许的跨域来源，多个值用逗号分隔；同源访问自动允许 |
-| `HTTP_SECURE_COOKIES` | 可省略；默认 `auto` 按访问协议决定，兼容显式 `true/false` |
 | `LOG_LEVEL` | 默认 `INFO` |
 | `TELEGRAM_LOG_LEVEL` | 默认 `0` |
 | `PUID` / `PGID` | 可选，挂载目录对应的用户和组 ID，默认 `0` |
 
-Compose 还固定配置 `TZ=Asia/Shanghai`、`APP_ENV=prod`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`DB_TYPE=sqlite`、`SHARE_ENABLED=false`。可选的 qBittorrent 下载／做种与平台分享模块完整保留，配置方式见 [dev 使用指南](docs/dev-guide.md#qbittorrent-保留情况)。
+Compose 只固定配置 `TZ=Asia/Shanghai`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`SHARE_ENABLED=false`。程序默认使用 `prod`、SQLite，并自动处理当前来源与 Cookie，无需在 Compose 重复填写。两个根目录必须保留，以对应 SSD 配置盘和 HDD 下载盘的挂载。
+
+需要额外跨域前端或固定 Cookie 策略时，在 Compose 的 `environment` 中显式添加 `HTTP_ALLOWED_ORIGINS` 或 `HTTP_SECURE_COOKIES`；精简文件不再转发这两个变量，仅写入宿主机 `.env` 不会生效。可选的 qBittorrent 下载／做种与平台分享模块完整保留，配置方式见 [dev 使用指南](docs/dev-guide.md#qbittorrent-保留情况)。
 
 上游仍支持外部数据库（`DB_TYPE`、`DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`）以及可选分享和 AI 配置；精简示例不会自动启用这些功能。完整运行参数以 `api/src/main/java/telegram/files/Config.java` 及 `share/ShareConfiguration.java` 为准。
 
