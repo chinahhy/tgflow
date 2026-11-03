@@ -224,6 +224,9 @@ public class HttpVerticle extends AbstractVerticle {
         router.get("/").handler(ctx -> ctx.response().end("Hello World!"));
         router.get("/settings").handler(this::handleSettings);
         router.post("/settings/create").handler(this::handleSettingsCreate);
+        router.get("/telegram/application").handler(ctx ->
+                ctx.json(TelegramApplicationSettings.instance().current().publicJson()));
+        router.post("/telegram/application").handler(this::handleTelegramApplicationUpdate);
         router.get("/automations/chats").handler(this::handleAutomationChats);
 
         router.post("/telegram/create").handler(this::handleTelegramCreate);
@@ -888,7 +891,32 @@ public class HttpVerticle extends AbstractVerticle {
                 .onFailure(ctx::fail);
     }
 
+    private void handleTelegramApplicationUpdate(RoutingContext ctx) {
+        JsonObject body = requestBody(ctx);
+        if (body == null) return;
+        vertx.executeBlocking(() -> TelegramApplicationSettings.instance().save(body))
+                .onSuccess(saved -> {
+                    ctx.json(saved.publicJson());
+                    TelegramVerticles.getAll().forEach(TelegramVerticle::retryApplicationConfiguration);
+                    TelegramVerticles.initTelegramVerticles(vertx).onFailure(ignored ->
+                            log.warn("Telegram settings saved; some accounts could not be restored"));
+                })
+                .onFailure(failure -> {
+                    if (failure instanceof IllegalArgumentException) {
+                        respondJson(ctx, 400, "TELEGRAM_APPLICATION_INVALID", failure.getMessage());
+                    } else {
+                        respondJson(ctx, 500, "TELEGRAM_APPLICATION_SAVE_FAILED",
+                                "Unable to save Telegram application settings");
+                    }
+                });
+    }
+
     private void handleTelegramCreate(RoutingContext ctx) {
+        if (!TelegramApplicationSettings.instance().current().configured()) {
+            respondJson(ctx, 400, "TELEGRAM_APPLICATION_REQUIRED",
+                    "Configure Telegram application credentials in Account management first");
+            return;
+        }
         String sessionId = ctx.session().id();
         TelegramVerticle telegramVerticle = sessionTelegramVerticles.get(sessionId);
         boolean isClosedOrClosing = telegramVerticle != null &&
@@ -941,7 +969,26 @@ public class HttpVerticle extends AbstractVerticle {
                         .map(TelegramVerticle::getTelegramAccount)
                         .toList()
                 )
-                .map(CompositeFuture::list)
+                .map(CompositeFuture::<JsonObject>list)
+                .compose(accounts -> DataVerticle.telegramRepository.getAll().map(records -> {
+                    if (!Boolean.TRUE.equals(authorized)) {
+                        var loadedIds = TelegramVerticles.getAll().stream()
+                                .map(item -> String.valueOf(item.getId())).collect(Collectors.toSet());
+                        var result = new ArrayList<>(accounts);
+                        for (var record : records) {
+                            String id = String.valueOf(record.id());
+                            if (loadedIds.contains(id)) continue;
+                            result.add(new JsonObject().put("id", id)
+                                    .put("name", StrUtil.blankToDefault(record.firstName(), id))
+                                    .put("phoneNumber", "").put("avatar", "")
+                                    .put("status", "inactive").put("sleeping", false)
+                                    .put("rootPath", record.rootPath()).put("proxy", record.proxy())
+                                    .put("needsApplicationSettings", !TelegramApplicationSettings.instance().current().configured()));
+                        }
+                        return result;
+                    }
+                    return accounts;
+                }))
                 .onSuccess(ctx::json)
                 .onFailure(ctx::fail);
     }

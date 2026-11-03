@@ -24,7 +24,7 @@ public class TelegramClient implements TelegramGateway {
         Client.setLogMessageHandler(0, new LogMessageHandler());
 
         try {
-            Client.execute(new TdApi.SetLogVerbosityLevel(Config.TELEGRAM_LOG_LEVEL));
+            Client.execute(new TdApi.SetLogVerbosityLevel(TelegramApplicationSettings.instance().current().logLevel()));
             Client.execute(new TdApi.SetLogStream(new TdApi.LogStreamFile(Path.of(Config.LOG_PATH, "tdlib.log").toString(),
                     1 << 27, false)));
         } catch (Client.ExecutionException error) {
@@ -36,6 +36,11 @@ public class TelegramClient implements TelegramGateway {
     public void initialize(Client.ResultHandler updateHandler,
                            Client.ExceptionHandler updateExceptionHandler,
                            Client.ExceptionHandler defaultExceptionHandler) {
+        try {
+            Client.execute(new TdApi.SetLogVerbosityLevel(TelegramApplicationSettings.instance().current().logLevel()));
+        } catch (Client.ExecutionException failure) {
+            throw new IllegalStateException("Unable to configure Telegram logging");
+        }
         List<TdApi.Object> pendingUpdates = new ArrayList<>();
         Client.ResultHandler bufferedUpdateHandler = updateHandler == null
                 ? null

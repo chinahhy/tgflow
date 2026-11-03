@@ -107,12 +107,6 @@ public class Config {
         if (APP_ROOT == null) {
             throw new RuntimeException("APP_ROOT is not set");
         }
-        if (TELEGRAM_API_ID == 0) {
-            throw new RuntimeException("TELEGRAM_API_ID is not set");
-        }
-        if (TELEGRAM_API_HASH == null) {
-            throw new RuntimeException("TELEGRAM_API_HASH is not set");
-        }
         if (HTTP_BODY_LIMIT_BYTES <= 0
             || AUTH_LOGIN_ATTEMPTS_PER_MINUTE <= 0
             || FILE_READS_PER_MINUTE <= 0) {

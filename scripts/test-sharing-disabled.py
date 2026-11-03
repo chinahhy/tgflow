@@ -36,13 +36,13 @@ class Client:
         self.jar = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.jar))
 
-    def request(self, path, data=None, method=None):
+    def request(self, path, data=None, method=None, csrf=True):
         headers = {"Origin": self.base}
         if data is not None:
             headers["Content-Type"] = "application/json"
-            csrf = next((cookie.value for cookie in self.jar if cookie.name == "tf_csrf"), None)
-            if csrf:
-                headers["X-CSRF-Token"] = csrf
+            csrf_value = next((cookie.value for cookie in self.jar if cookie.name == "tf_csrf"), None)
+            if csrf and csrf_value:
+                headers["X-CSRF-Token"] = csrf_value
         request = urllib.request.Request(self.base + path, method=method, headers=headers,
             data=None if data is None else json.dumps(data).encode())
         try:
@@ -78,7 +78,7 @@ def verify_case(image, server, malformed):
         state.mkdir()
         environment = {
             "APP_ENV": "dev", "APP_ROOT": "/app/data", "DOWNLOAD_ROOT": "/downloads",
-            "NGINX_PORT": "18027", "TELEGRAM_API_ID": "1", "TELEGRAM_API_HASH": "test-only-placeholder",
+            "NGINX_PORT": "18027",
             "PUID": str(os.getuid()), "PGID": str(os.getgid()),
             "SHARE_ENABLED": "true", "SEED_PLATFORM_URL": endpoint,
             "QBITTORRENT_URL": endpoint, "QBITTORRENT_USERNAME": "test-only",
@@ -100,11 +100,23 @@ def verify_case(image, server, malformed):
             logs = subprocess.check_output(["docker", "logs", container], stderr=subprocess.STDOUT).decode()
             match = re.search(r"one-time bootstrap code \(expires in 15 minutes\): (\S+)", logs)
             assert match, "Missing disposable bootstrap code"
+            assert client.request("/api/telegram/application")[0] == 401
             credentials = {"username": "sharing-test-admin", "password": "Disposable-sharing-test-password"}
             assert client.request("/api/auth/bootstrap", {**credentials, "bootstrapToken": match[1]})[0] == 201
             assert client.request("/api/auth/session")[0] == 200
             assert client.request("/")[0] == 200
             assert client.request("/share")[0] == 404, "Removed frontend page was exported"
+
+            status, application = client.request("/api/telegram/application")
+            assert status == 200 and application["configured"] is False and "apiHash" not in application
+            assert client.request("/api/telegram/create", {})[0] == 400
+            application_input = {"apiId": 123456, "apiHash": "disposable-application-test-hash", "logLevel": 0}
+            assert client.request("/api/telegram/application", application_input, csrf=False)[0] == 403
+            status, saved = client.request("/api/telegram/application", application_input)
+            assert status == 200 and saved["configured"] is True and saved["source"] == "saved"
+            assert "apiHash" not in saved and application_input["apiHash"] not in json.dumps(saved)
+            assert client.request("/api/telegram/application", {"apiId": 123457})[0] == 400
+            assert client.request("/api/telegram/application", {"apiId": 123456, "apiHash": "", "logLevel": 2})[0] == 200
 
             # The application's SQLite connection uses an exclusive lock.
             # Prepare legacy data offline, then verify it across a real restart.
@@ -114,6 +126,9 @@ def verify_case(image, server, malformed):
             subprocess.run(["docker", "start", container], check=True, capture_output=True)
             wait_for_health(client)
             assert client.request("/api/auth/login", credentials)[0] == 200
+            status, restored = client.request("/api/telegram/application")
+            assert status == 200 and restored["configured"] is True and restored["apiId"] == 123456
+            assert restored["logLevel"] == 2 and restored["source"] == "saved" and "apiHash" not in restored
             assert client.request("/api/settings?keys=shareEnabled")[1]["shareEnabled"] is False
             assert client.request("/api/settings/create", {"shareEnabled": True})[0] == 200
             assert client.request("/api/settings?keys=shareEnabled")[1]["shareEnabled"] is False
@@ -139,7 +154,7 @@ def verify_case(image, server, malformed):
             assert client.request("/api/files?downloadStatus=completed")[0] == 200
             time.sleep(2)
             assert server.hits == [], f"Unexpected platform/qBittorrent requests: {server.hits}"
-            print(f"Sharing disabled ({'malformed' if malformed else 'enabled'} legacy settings): APIs blocked, old settings ignored, no platform/qBittorrent requests")
+            print(f"Sharing disabled ({'malformed' if malformed else 'enabled'} legacy settings): APIs blocked, no platform/qBittorrent requests; zero-env Telegram configuration saved and restored")
         except Exception:
             logs = subprocess.run(["docker", "logs", container], capture_output=True, text=True)
             print("\n".join(line for line in (logs.stdout + logs.stderr).splitlines()

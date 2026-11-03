@@ -1223,6 +1223,18 @@ public class TelegramVerticle extends AbstractVerticle {
         };
     }
 
+    TelegramApplicationSettings.Values applicationSettings() {
+        return TelegramApplicationSettings.instance().current();
+    }
+
+    void retryApplicationConfiguration() {
+        context.runOnContext(_ -> {
+            if (!authorized && lastAuthorizationState instanceof TdApi.AuthorizationStateWaitTdlibParameters) {
+                onAuthorizationStateUpdated(lastAuthorizationState);
+            }
+        });
+    }
+
     private void onAuthorizationStateUpdated(TdApi.AuthorizationState authorizationState) {
         log.debug("[%s] Receive authorization state update: %s"
                 .formatted(getRootId(), authorizationState.getClass().getSimpleName()));
@@ -1242,8 +1254,13 @@ public class TelegramVerticle extends AbstractVerticle {
                 request.useFileDatabase = true;
                 request.useChatInfoDatabase = true;
                 request.useSecretChats = true;
-                request.apiId = Config.TELEGRAM_API_ID;
-                request.apiHash = Config.TELEGRAM_API_HASH;
+                var application = applicationSettings();
+                if (!application.configured()) {
+                    readyPromise.tryFail("Configure Telegram application credentials in Account management first");
+                    return;
+                }
+                request.apiId = application.apiId();
+                request.apiHash = application.apiHash();
                 request.systemLanguageCode = "en";
                 request.deviceModel = "Telegram Files";
                 request.applicationVersion = Start.VERSION;

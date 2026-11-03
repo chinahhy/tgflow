@@ -62,6 +62,7 @@ export default function ProxysDialog({
       <TooltipWrapper content={triggerTooltipContent}>
         <DialogTrigger asChild>
           <Button
+            aria-label={t("Proxys")}
             variant="ghost"
             size="icon"
             className={cn(

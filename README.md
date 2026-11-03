@@ -40,13 +40,13 @@ TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可
 适用于极空间 Z4Pro、Dockge 及一般 AMD64 Linux 主机：单容器、SQLite、默认端口 `8026`、时区 `Asia/Shanghai`、`restart: unless-stopped`。基础 Telegram 下载不需要 PostgreSQL、MySQL 或 qBittorrent。
 
 1. 在新的部署目录放入 [docker-compose.yaml](docker-compose.yaml) 和 [.env.example](.env.example)，将后者复制为 `.env`。
-2. 镜像地址固定为 `hoya0803/tgflow:dev`，只需填写 Telegram API ID / Hash 和实际存储路径。
+2. 镜像地址固定为 `hoya0803/tgflow:dev`，只需调整实际存储路径；Telegram 凭据在启动后的 WebUI 中配置。
 3. 确认 `PORT` 对应的主机端口可用；普通 HTTP 或 HTTPS 反代无需填写来源和 Cookie 参数。
 4. 启动：
 
 ```bash
 cp .env.example .env
-# 编辑 .env，填写凭据；不要将它提交到 Git。
+# 按需编辑 .env 中的主机路径。
 docker compose config --quiet
 docker compose pull
 docker compose up -d
@@ -69,12 +69,10 @@ Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例�
 
 | 变量 | 说明 |
 | --- | --- |
-| `TELEGRAM_API_ID` / `TELEGRAM_API_HASH` | 必填，Telegram 应用凭据 |
 | `PORT` | 主机端口，默认 `8026`，容器入口 `8026` |
 | `CONFIG_DIR` | 应用状态目录，示例 `./config`，建议 SSD |
 | `DOWNLOAD_DIR` | 下载暂存与完成文件目录，默认 `./downloads`，建议 HDD |
 | `DATA_DIR` | 兼容旧配置；未设置 CONFIG_DIR 时作为应用状态目录 |
-| `TELEGRAM_LOG_LEVEL` | 默认 `0` |
 | `PUID` / `PGID` | 可选，挂载目录对应的用户和组 ID，默认 `0` |
 
 镜像内置 `APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`，程序日志默认 `INFO`，Compose 无需再写这三项。镜像地址直接写为 `hoya0803/tgflow:dev`，修改 `volumes` 左侧的主机路径或 `.env` 中的 `CONFIG_DIR` / `DOWNLOAD_DIR` 即可分配 SSD 与 HDD。高级使用如需改变容器内目录或日志级别，须在 Compose 的 `environment` 显式覆盖。
@@ -87,7 +85,11 @@ Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例�
 
 ### 获取 Telegram API ID / Hash
 
-登录 [my.telegram.org](https://my.telegram.org)，打开 **API development tools**，创建应用并保存 `api_id` 和 `api_hash`。将两项写入本地 `.env`。它们不是 Bot Token，不能相互替代，也不要写入 README、Issues 或 Git。
+登录 [my.telegram.org](https://my.telegram.org)，打开 **API development tools**，创建应用并保存 `api_id` 和 `api_hash`。启动容器并登录管理员后，在“账号管理 → Telegram 应用凭据”填写并保存。它们不是 Bot Token，不能相互替代，也不要写入 README、Issues 或 Git。
+
+API ID / Hash 是所有 Telegram 账号共用的应用凭据，与每个账号的手机号、验证码、两步验证密码不同。保存内容位于配置卷 `/app/data/telegram-application.json`，重建容器后保留；API Hash 不会通过查询接口回显，修改其他字段时可留空保持原值。日志级别默认 `0`，可在同一页面的高级设置中调整，连接初始化时生效。
+
+旧 Compose 中的 `TELEGRAM_API_ID`、`TELEGRAM_API_HASH`、`TELEGRAM_LOG_LEVEL` 仍作为兼容后备，页面保存值优先。升级时可先保留原环境变量启动新镜像，在页面点击保存完成导入，再移除这三项；若已移除，重新填写原来的凭据即可，已有账号记录和会话目录仍保留，保存后自动恢复连接。仅在宿主机 `.env` 中填写旧变量不会自动传入精简 Compose。
 
 ### 首次管理员初始化
 
@@ -107,7 +109,7 @@ docker compose exec -it tgflow tfm admin apply-reset <管理员用户名>
 
 ### 登录 Telegram 账号
 
-管理员登录后点击“添加账号”，按需选择代理，启动初始化。可输入含国家或地区代码的手机号及 Telegram 验证码；启用两步验证时还需密码。也可使用已登录的 Telegram 官方客户端扫码。登录状态由 TDLib 保存在持久化目录中，不受界面语言切换影响。
+管理员登录后，先在“账号管理 → Telegram 应用凭据”保存 API ID / Hash，再点击“添加账号”，按需选择代理，启动初始化。可输入含国家或地区代码的手机号及 Telegram 验证码；启用两步验证时还需密码。也可使用已登录的 Telegram 官方客户端扫码。登录状态由 TDLib 保存在持久化目录中，不受界面语言切换影响。
 
 ### 数据目录与升级
 

@@ -66,6 +66,7 @@ export function AccountDialog({
             proxyName={proxyName}
             onCreated={setNewAccountId}
             onLoginSuccess={() => setOpen(false)}
+            onConfigureApplication={() => setOpen(false)}
           />
           <div className="flex justify-end">
             <ProxysDialog

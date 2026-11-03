@@ -110,17 +110,58 @@ class TelegramStorageFlowTest {
     void tdlibReceivesSeparateDatabaseAndFileDirectories(Vertx vertx, VertxTestContext context) throws Exception {
         Path account = Files.createDirectories(Path.of(Config.TELEGRAM_ROOT, "parameters-account"));
         var gateway = new ScriptedTelegramGateway(_ -> new TdApi.Ok());
-        var telegram = new TelegramVerticle(account.toString(), () -> gateway);
+        Path configuration = Files.createTempDirectory("tgflow-application-test-");
+        var application = new TelegramApplicationSettings(configuration, java.util.Map.of());
+        application.save(new io.vertx.core.json.JsonObject().put("apiId", 654321).put("apiHash", "saved-test-hash"));
+        var reloaded = new TelegramApplicationSettings(configuration, java.util.Map.of());
+        var telegram = new TelegramVerticle(account.toString(), () -> gateway) {
+            @Override TelegramApplicationSettings.Values applicationSettings() { return reloaded.current(); }
+        };
         telegram.init(vertx, vertx.getOrCreateContext());
         telegram.initializeTelegramGateway();
         gateway.emit(new TdApi.UpdateAuthorizationState(new TdApi.AuthorizationStateWaitTdlibParameters()));
         context.verify(() -> {
             var parameters = gateway.requests().stream().filter(TdApi.SetTdlibParameters.class::isInstance)
                     .map(TdApi.SetTdlibParameters.class::cast).findFirst().orElseThrow();
+            assertEquals(654321, parameters.apiId);
+            assertEquals("saved-test-hash", parameters.apiHash);
             assertEquals(account.toString(), parameters.databaseDirectory);
             assertTrue(Path.of(parameters.filesDirectory).startsWith(Path.of(Config.DOWNLOAD_ROOT)));
             assertNotEquals(parameters.databaseDirectory, parameters.filesDirectory);
             context.completeNow();
         });
+        Files.delete(configuration.resolve("telegram-application.json"));
+        Files.delete(configuration);
     }
+
+    @Test
+    void savingCorrectedCredentialsRetriesOnlyAccountsWaitingForApplicationParameters(
+            Vertx vertx, VertxTestContext context, @org.junit.jupiter.api.io.TempDir Path configuration) throws Exception {
+        var settings = new TelegramApplicationSettings(configuration, java.util.Map.of());
+        settings.save(new io.vertx.core.json.JsonObject().put("apiId", 123).put("apiHash", "initial-test-hash"));
+        var gateway = new ScriptedTelegramGateway(_ -> new TdApi.Ok());
+        var telegram = new TelegramVerticle(Path.of(Config.TELEGRAM_ROOT, "retry-application").toString(), () -> gateway) {
+            @Override TelegramApplicationSettings.Values applicationSettings() { return settings.current(); }
+        };
+        var loop = vertx.getOrCreateContext();
+        telegram.init(vertx, loop);
+        telegram.initializeTelegramGateway();
+        gateway.emit(new TdApi.UpdateAuthorizationState(new TdApi.AuthorizationStateWaitTdlibParameters()));
+        settings.save(new io.vertx.core.json.JsonObject().put("apiId", 456).put("apiHash", "corrected-test-hash"));
+        telegram.retryApplicationConfiguration();
+        loop.runOnContext(_ -> context.verify(() -> {
+            var requests = gateway.requests().stream().filter(TdApi.SetTdlibParameters.class::isInstance)
+                    .map(TdApi.SetTdlibParameters.class::cast).toList();
+            assertEquals(2, requests.size());
+            assertEquals(456, requests.getLast().apiId);
+            assertEquals("corrected-test-hash", requests.getLast().apiHash);
+            telegram.authorized = true;
+            telegram.retryApplicationConfiguration();
+            loop.runOnContext(_ -> context.verify(() -> {
+                assertEquals(2, gateway.requests().size());
+                context.completeNow();
+            }));
+        }));
+    }
+
 }

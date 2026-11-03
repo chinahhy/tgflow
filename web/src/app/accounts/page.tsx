@@ -9,6 +9,7 @@ import { useTelegramAccount } from "@/hooks/use-telegram-account";
 import { useLocale } from "@/hooks/use-locale";
 import { t } from "@/lib/i18n";
 import { Plus } from "lucide-react";
+import { TelegramApplicationSettings } from "@/components/telegram-application-settings";
 
 export default function AccountsPage() {
   useLocale();
@@ -29,6 +30,7 @@ export default function AccountsPage() {
           </Button>
         </AccountDialog>
       </PageHeading>
+      <TelegramApplicationSettings />
       {isLoading ? (
         <p className="text-muted-foreground">{t("Loading...")}</p>
       ) : accounts.length ? (

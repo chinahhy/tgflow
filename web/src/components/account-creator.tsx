@@ -48,6 +48,8 @@ import dynamic from "next/dynamic";
 import QRCodeStyling, { type Options } from "qr-code-styling";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { useTelegramApplication } from "@/hooks/use-telegram-application";
 
 function AuthPanel({
   icon: Icon,
@@ -107,6 +109,7 @@ interface AccountCreatorProps {
   proxyName: string | undefined;
   onCreated?: (id: string) => void;
   onLoginSuccess?: () => void;
+  onConfigureApplication?: () => void;
 }
 
 const Lottie = dynamic(() => import("lottie-react"));
@@ -116,6 +119,7 @@ export default function AccountCreator({
   proxyName,
   onCreated,
   onLoginSuccess,
+  onConfigureApplication,
 }: AccountCreatorProps) {
   useLocale();
   const { triggerMethod, isMethodExecuting } = useTelegramMethod();
@@ -123,6 +127,7 @@ export default function AccountCreator({
   const { mutate } = useSWRConfig();
   const { lastJsonMessage } = useWebsocket();
   const { account, resetAccount } = useTelegramAccount();
+  const application = useTelegramApplication();
   const [initSuccessfully, setInitSuccessfully] = useState(false);
   const [authState, setAuthState] = useState<number | undefined>(undefined);
   const [qrCodeLink, setQrCodeLink] = useState<string | undefined>(undefined);
@@ -289,9 +294,20 @@ export default function AccountCreator({
               )}
             </p>
           </div>
+          {!application.data?.configured && (
+            <p className="text-sm text-muted-foreground">
+              <Link
+                href="/accounts#telegram-application"
+                onClick={onConfigureApplication}
+                className="underline"
+              >
+                {t("Configure Telegram application credentials first")}
+              </Link>
+            </p>
+          )}
           <Button
             className="w-full"
-            disabled={debounceIsCreateMutating}
+            disabled={debounceIsCreateMutating || !application.data?.configured}
             onClick={async () => {
               await triggerCreate().then(() => {
                 void mutate("/telegrams");

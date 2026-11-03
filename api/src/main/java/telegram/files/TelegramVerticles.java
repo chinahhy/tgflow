@@ -23,6 +23,7 @@ public class TelegramVerticles {
     private static final List<TelegramVerticle> telegramVerticles = new ArrayList<>();
 
     private static TelegramGatewayFactory telegramGatewayFactory = TelegramGatewayFactory.tdlib();
+    private static Future<Void> restoring;
 
     static void configureTelegramGatewayFactory(TelegramGatewayFactory factory) {
         telegramGatewayFactory = Objects.requireNonNull(factory, "factory");
@@ -40,9 +41,12 @@ public class TelegramVerticles {
         return new TelegramVerticle(record, telegramGatewayFactory);
     }
 
-    public static Future<Void> initTelegramVerticles(Vertx vertx) {
-        return DataVerticle.telegramRepository.getAll()
+    public static synchronized Future<Void> initTelegramVerticles(Vertx vertx) {
+        if (!TelegramApplicationSettings.instance().current().configured()) return Future.succeededFuture();
+        if (restoring != null && !restoring.isComplete()) return restoring;
+        restoring = DataVerticle.telegramRepository.getAll()
                 .compose(telegramRecords -> {
+                    var loadedPaths = telegramVerticles.stream().map(item -> item.rootPath).collect(java.util.stream.Collectors.toSet());
                     List<String> verifiedPath = telegramRecords.stream().map(TelegramRecord::rootPath).toList();
                     File telegramRoot = FileUtil.file(Config.TELEGRAM_ROOT);
                     List<String> uncertifiedPaths = FileUtil.loopFiles(telegramRoot, 1, null)
@@ -52,6 +56,7 @@ public class TelegramVerticles {
                             .toList();
                     List<Future<String>> futures = new ArrayList<>();
                     for (TelegramRecord telegramRecord : telegramRecords) {
+                        if (loadedPaths.contains(telegramRecord.rootPath())) continue;
                         TelegramVerticle telegramVerticle = create(telegramRecord);
                         if (!telegramVerticle.check()) {
                             continue;
@@ -61,6 +66,7 @@ public class TelegramVerticles {
                     }
                     if (CollUtil.isNotEmpty(uncertifiedPaths)) {
                         for (String uncertifiedPath : uncertifiedPaths) {
+                            if (loadedPaths.contains(uncertifiedPath)) continue;
                             TelegramVerticle telegramVerticle = create(uncertifiedPath);
                             if (!telegramVerticle.check()) {
                                 continue;
@@ -74,6 +80,7 @@ public class TelegramVerticles {
                 .onSuccess(r -> log.info("Successfully deployed %d telegram verticles".formatted(r.size())))
                 .onFailure(err -> log.error("Failed to deploy telegram verticles: %s".formatted(err.getMessage())))
                 .mapEmpty();
+        return restoring;
     }
 
     public static void add(TelegramVerticle telegramVerticle) {

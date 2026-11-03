@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, WebSocketRoute } from "@playwright/test";
 import type { Auto, TelegramFile } from "../src/lib/types";
 
 export function devFiles(): TelegramFile[] {
@@ -82,8 +82,21 @@ export function devFiles(): TelegramFile[] {
 
 export async function installDevApi(
   page: Page,
-  options: { sparse?: boolean; shareEnabled?: boolean | string } = {},
+  options: {
+    sparse?: boolean;
+    shareEnabled?: boolean | string;
+    applicationConfigured?: boolean;
+  } = {},
 ) {
+  let application = {
+    apiId: options.applicationConfigured === false ? null : 123456,
+    apiHashConfigured: options.applicationConfigured !== false,
+    configured: options.applicationConfigured !== false,
+    logLevel: 0,
+    source: options.applicationConfigured === false ? "none" : "saved",
+    storageError: false,
+  };
+  const sockets: WebSocketRoute[] = [];
   const files = devFiles();
   const writes: {
     path: string;
@@ -115,7 +128,9 @@ export async function installDevApi(
       },
     },
   };
-  await page.routeWebSocket("ws://localhost:8080/**", () => {});
+  await page.routeWebSocket("ws://localhost:8080/**", (socket) => {
+    sockets.push(socket);
+  });
   await page.route("http://localhost:8080/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -135,6 +150,30 @@ export async function installDevApi(
     if (request.method() === "POST") {
       const body = (request.postDataJSON() ?? {}) as Record<string, unknown>;
       writes.push({ path, body, csrf: request.headers()["x-csrf-token"] });
+      if (path === "/telegram/application") {
+        application = {
+          ...application,
+          apiId: Number(body.apiId),
+          apiHashConfigured: true,
+          configured: true,
+          logLevel: Number(body.logLevel ?? 0),
+          source: "saved",
+        };
+        await route.fulfill({
+          status: 200,
+          headers,
+          body: JSON.stringify(application),
+        });
+        return;
+      }
+      if (path === "/telegram/create") {
+        await route.fulfill({
+          status: 200,
+          headers,
+          body: JSON.stringify({ id: "2" }),
+        });
+        return;
+      }
       if (path.endsWith("update-auto-settings")) auto = body as unknown as Auto;
       if (path.endsWith("toggle-pause-download")) {
         const file = files.find((item) => item.id === body.fileId);
@@ -168,6 +207,7 @@ export async function installDevApi(
         absoluteExpiresAt: Date.now() + 7200000,
       };
     else if (path === "/auth/bootstrap/status") body = { required: false };
+    else if (path === "/telegram/application") body = application;
     else if (path === "/telegrams")
       body = [
         {
@@ -246,5 +286,18 @@ export async function installDevApi(
       body = [];
     await route.fulfill({ status: 200, headers, body: JSON.stringify(body) });
   });
-  return { writes, requests };
+  return {
+    writes,
+    requests,
+    authorize: (constructor: number, extra: Record<string, unknown> = {}) => {
+      for (const socket of sockets)
+        socket.send(
+          JSON.stringify({
+            type: 1,
+            data: { constructor, ...extra },
+            timestamp: Date.now(),
+          }),
+        );
+    },
+  };
 }

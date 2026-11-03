@@ -11,7 +11,7 @@
 | `/downloads` | 所有已开始的任务；按状态、名称、大小、格式等筛选，暂停、继续和重试 |
 | `/files` | 已下载文件库；封面／列表、预览与下载，保留原有列表批量操作 |
 | `/automations` | 已配置聊天和五步配置指南 |
-| `/accounts` | 添加、登录和管理 Telegram 账号 |
+| `/accounts` | 配置应用凭据，添加、登录和管理 Telegram 账号 |
 | `/settings` | 常规、存储、统计、代理、API、关于 |
 
 侧栏可以折叠并记住偏好；手机使用导航抽屉。设置页签保存在 `?tab=storage` 等地址里。文件的筛选、排序和封面／列表选择也保存在 URL，刷新或分享给同一服务的管理员后可恢复。例如：
@@ -32,8 +32,6 @@
 CONFIG_DIR=/path/on/ssd/tgflow-dev/config
 DOWNLOAD_DIR=/path/on/hdd/tgflow-dev/downloads
 PORT=8026
-TELEGRAM_API_ID=填写自己的ID
-TELEGRAM_API_HASH=填写自己的Hash
 ```
 
 Compose 中的两处绑定挂载为：
@@ -61,7 +59,7 @@ volumes:
 
 “设置 → 存储”显示实际容器目录，主机路径仍在 Compose 修改。使用非 root 的 `PUID/PGID` 时，两个专用目录及已有子目录须允许该 UID/GID 读写；启动脚本只调整下载挂载根目录的所有者，不递归改动整个 HDD。
 
-确认凭据、访问地址和目录后，在该部署目录执行：
+确认访问地址和目录后，在该部署目录执行：
 
 ```bash
 docker compose -p tgflow-dev config --quiet
@@ -71,6 +69,14 @@ docker compose -p tgflow-dev logs -f tgflow
 ```
 
 按 README 的步骤初始化管理员，然后添加 Telegram 账号。当前镜像验证平台是 `linux/amd64`。
+
+### 在 WebUI 配置 Telegram
+
+容器无需 Telegram 环境变量即可启动。完成管理员初始化并登录后，打开“账号管理 → Telegram 应用凭据”，填写从 [my.telegram.org](https://my.telegram.org) 获取的 API ID / Hash 并保存，然后再添加账号。手机号、验证码、两步验证密码、扫码登录及账号代理选项继续保留。
+
+API ID / Hash 供所有账号共用；Telegram 日志级别在“高级设置”中调整，默认 `0`，连接初始化时生效。配置文件保存在 SSD 配置卷的 `telegram-application.json` 中，重建容器后保留。Hash 保存后不回显，留空会保留原值；更换 API ID 时需要同时填写匹配的新 Hash。当前下载不会因保存设置而被强制重连。
+
+旧环境变量仍兼容，WebUI 保存值优先。已有实例建议先保留旧变量更新镜像，在页面点击保存导入后，再从 Compose 删除 `TELEGRAM_API_ID`、`TELEGRAM_API_HASH`、`TELEGRAM_LOG_LEVEL`。直接换用精简 Compose 时，在页面重新填写原凭据即可；原账号记录和会话保留，保存后会恢复连接。
 
 ### 已有实例与回退
 
@@ -116,7 +122,7 @@ CI 对同一镜像分别测试默认自动模式、显式 true、显式 false，
 
 dev 在代码中固定禁用 telegram-seed 平台分享、节点绑定、BT 下载和做种。启动链路已移除分享后台，不启动平台心跳、任务轮询或 qBittorrent 客户端；Telegram 下载、暂停、继续和取消直接走 TDLib。
 
-`SHARE_ENABLED=true`、`SEED_PLATFORM_URL`、`QBITTORRENT_*` 等旧环境变量不会启用这些功能；旧数据库中的 `shareEnabled=true` 和浏览器缓存也不生效。Compose 保留 `SHARE_ENABLED=false` 以明确部署意图。分享 API 返回 `SHARE_DISABLED`，界面入口及 `/share` 页面已移除。
+`SHARE_ENABLED=true`、`SEED_PLATFORM_URL`、`QBITTORRENT_*` 等旧环境变量不会启用这些功能；旧数据库中的 `shareEnabled=true` 和浏览器缓存也不生效。Compose 无需填写 `SHARE_ENABLED`，代码层固定禁用，不能通过参数重新开启。分享 API 返回 `SHARE_DISABLED`，界面入口及 `/share` 页面已移除。
 
 正常 Telegram 下载、自动化、已下载文件的本地预览与浏览器下载保留。数据库中的历史分享记录和已有文件不删除。此限制只针对 dev；main / latest 保持原有行为。
 

@@ -4,11 +4,6 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
-      # 分享 / BT 做种已在 dev 代码中永久禁用，此项保留用于明确部署意图。
-      SHARE_ENABLED: "false"
-      TELEGRAM_API_ID: ${TELEGRAM_API_ID:?请设置 Telegram API ID}
-      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:?请设置 Telegram API Hash}
-      TELEGRAM_LOG_LEVEL: ${TELEGRAM_LOG_LEVEL:-0}
       PUID: ${PUID:-0}
       PGID: ${PGID:-0}
     ports:
