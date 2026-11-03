@@ -48,7 +48,6 @@ import telegram.files.security.auth.AdminAuthModels.AuthException;
 import telegram.files.security.auth.AdminAuthModels.BootstrapState;
 import telegram.files.security.auth.AdminAuthModels.IssuedSession;
 import telegram.files.security.auth.AdminAuthService;
-import telegram.files.share.UnifiedFileDownloadService;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,12 +70,6 @@ public class HttpVerticle extends AbstractVerticle {
     private final List<String> unboundClients = new ArrayList<>();
 
     private final FileRouteHandler fileRouteHandler = new FileRouteHandler();
-
-    private UnifiedFileDownloadService unifiedFileDownloadService;
-
-    void configureUnifiedFileDownloadService(UnifiedFileDownloadService service) {
-        this.unifiedFileDownloadService = service;
-    }
 
     private static final String SESSION_COOKIE_NAME = "tf";
 
@@ -562,18 +555,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void requestShareCommand(RoutingContext ctx, EventEnum event, JsonObject body) {
-        if (!Config.shareConfiguration().enabled()) {
-            respondJson(ctx, 404, "SHARE_DISABLED", "Share module is disabled");
-            return;
-        }
-        vertx.eventBus().<JsonObject>request(event.address(), body)
-                .onSuccess(message -> ctx.json(message.body()))
-                .onFailure(failure -> respondJson(
-                        ctx,
-                        400,
-                        "SHARE_COMMAND_FAILED",
-                        failure.getMessage() == null ? "Share command failed" : failure.getMessage()
-                ));
+        respondJson(ctx, 404, "SHARE_DISABLED", "Sharing and BT seeding are permanently disabled in TGFlow dev");
     }
 
     private boolean acquire(
@@ -861,6 +843,7 @@ public class HttpVerticle extends AbstractVerticle {
         }
 
         Future.all(object.stream()
+                        .filter(setting -> !"shareEnabled".equals(setting.getKey()))
                         .map(setting -> DataVerticle.settingRepository.createOrUpdate(setting.getKey(),
                                 Convert.toStr(setting.getValue(), "")))
                         .toList())
@@ -1434,21 +1417,7 @@ public class HttpVerticle extends AbstractVerticle {
                             if (telegramId != null && telegramId != 0) {
                                 return telegramHandler.apply(TelegramVerticles.getOrElseThrow(telegramId), file);
                             }
-                            if (unifiedFileDownloadService == null) {
-                                return Future.failedFuture("Seed control is unavailable");
-                            }
-                            String uniqueId = file.getString("uniqueId", "");
-                            if (!uniqueId.startsWith("seed:")) {
-                                return Future.failedFuture("Seed resource is invalid");
-                            }
-                            String resourceId = uniqueId.substring("seed:".length());
-                            return seedControlType == null
-                                    ? unifiedFileDownloadService.startSeedResource(resourceId)
-                                    : unifiedFileDownloadService.controlSeedResource(
-                                            resourceId,
-                                            seedControlType,
-                                            uploadLimitBytesPerSecond
-                                    );
+                            return Future.failedFuture("Sharing and BT seeding are permanently disabled in TGFlow dev");
                         })
                         .toList())
                 .onSuccess(ctx::json)

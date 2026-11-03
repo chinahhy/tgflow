@@ -2,6 +2,83 @@ import { test, expect } from "./auth.fixture";
 import { installDevApi } from "./dev-api.fixture";
 import path from "node:path";
 
+test("sharing stays absent with old enabled settings and cache, including its direct URL", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() !== "error") return;
+    if (
+      message.text().includes("404") &&
+      message.location().url.endsWith("/share")
+    )
+      return;
+    errors.push(message.text());
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem("telegram-files:share-enabled", "true");
+  });
+  const api = await installDevApi(page, { shareEnabled: "true" });
+  await page.setViewportSize({ width: 1505, height: 1045 });
+  await page.goto("/");
+  await expect(page).toHaveTitle("TGFlow");
+  await expect(
+    page.getByRole("heading", { name: "概览", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "主导航" }).getByRole("link"),
+  ).toHaveCount(7);
+  await expect(page.locator('a[href="/share"]')).toHaveCount(0);
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: "已下载", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/files/, { timeout: 30_000 });
+  await expect(
+    page.getByRole("heading", { name: "已下载", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "分享到 telegram-seed", exact: true }),
+  ).toHaveCount(0);
+  if (process.env.TGFLOW_SCREENSHOT_DIR)
+    await page.screenshot({
+      path: path.join(
+        process.env.TGFLOW_SCREENSHOT_DIR,
+        "dev-sharing-disabled-desktop.png",
+      ),
+      fullPage: true,
+      animations: "disabled",
+    });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "打开导航" }).click();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("navigation", { name: "主导航" })
+      .getByRole("link"),
+  ).toHaveCount(7);
+  await expect(page.locator('a[href="/share"]')).toHaveCount(0);
+  if (process.env.TGFLOW_SCREENSHOT_DIR)
+    await page.screenshot({
+      path: path.join(
+        process.env.TGFLOW_SCREENSHOT_DIR,
+        "dev-sharing-disabled-mobile.png",
+      ),
+      fullPage: true,
+      animations: "disabled",
+    });
+  const response = await page.goto("/share");
+  expect(response?.status()).toBe(404);
+  await expect(
+    page.getByRole("heading", { name: "页面不存在", exact: true }),
+  ).toBeVisible();
+  expect(
+    api.requests.filter((url) => url.pathname.startsWith("/share/")),
+  ).toHaveLength(0);
+  expect(errors).toEqual([]);
+});
+
 test("sparse online matches allow explicit continuation without scanning endlessly", async ({
   page,
 }) => {
@@ -16,7 +93,9 @@ test("sparse online matches allow explicit continuation without scanning endless
     api.requests.filter((url) => url.pathname.endsWith("/chat/-100/files"));
   expect(searches()).toHaveLength(1);
   await page.getByRole("button", { name: "继续加载", exact: true }).click();
-  await expect(page.getByRole("button", { name: "山间漫步.mkv", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "山间漫步.mkv", exact: true }),
+  ).toBeVisible();
   expect(
     searches().some((url) => url.searchParams.get("fromMessageId") === "900"),
   ).toBe(true);

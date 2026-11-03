@@ -112,20 +112,15 @@ docker compose -p tgflow-dev logs -f tgflow
 
 CI 对同一镜像分别测试默认自动模式、显式 true、显式 false，走真实 TLS 代理，并覆盖 Host 被外层改写、外部非默认端口、HTTP/HTTPS 登录、Cookie 属性、会话、CSRF 和 WS/WSS。显式模式还验证已有来源列表与自动同源访问能同时工作。
 
-## qBittorrent 保留情况
+## 分享与 BT 永久禁用
 
-原项目的 qBittorrent WebAPI 客户端、BT 下载、任务控制、做种和统计模块均保留。它属于可选的 telegram-seed / BT 模块，基础 Telegram 附件仍由 TDLib 下载。默认 Compose 的 `SHARE_ENABLED=false` 只关闭该模块，不删除代码。
+dev 在代码中固定禁用 telegram-seed 平台分享、节点绑定、BT 下载和做种。启动链路已移除分享后台，不启动平台心跳、任务轮询或 qBittorrent 客户端；Telegram 下载、暂停、继续和取消直接走 TDLib。
 
-原项目采用容器环境变量配置 qBittorrent，未提供独立的 qBittorrent WebUI 设置表单。需要使用原有模块时，在 Compose 的 `environment` 中按原部署配置这些变量（仅写在宿主机 `.env` 而不传进容器不会生效）：
+`SHARE_ENABLED=true`、`SEED_PLATFORM_URL`、`QBITTORRENT_*` 等旧环境变量不会启用这些功能；旧数据库中的 `shareEnabled=true` 和浏览器缓存也不生效。Compose 保留 `SHARE_ENABLED=false` 以明确部署意图。分享 API 返回 `SHARE_DISABLED`，界面入口及 `/share` 页面已移除。
 
-| 变量 | 作用 |
-| --- | --- |
-| `QBITTORRENT_URL` | qBittorrent WebUI 的 HTTP(S) 地址 |
-| `QBITTORRENT_USERNAME` / `QBITTORRENT_PASSWORD` | WebAPI 登录凭据 |
-| `SHARED_ROOT` | TGFlow 可见的共享存储目录，建议位于 HDD，例如 `/downloads/shared` |
-| `QBITTORRENT_SHARED_ROOT` | 同一目录在 qBittorrent 容器中的路径，用于路径映射 |
+正常 Telegram 下载、自动化、已下载文件的本地预览与浏览器下载保留。数据库中的历史分享记录和已有文件不删除。此限制只针对 dev；main / latest 保持原有行为。
 
-平台任务还沿用 `SHARE_ENABLED`、`SEED_PLATFORM_URL` 和原来的节点绑定流程。两个容器的共享目录必须对应同一主机存储。凭据应放在部署端，不提交到 Git。本轮保持这部分协议与任务逻辑不变，并运行其原有回归测试。
+更新自己的容器到包含此改动的 dev 镜像后生效。此项目不会管理或停止独立 qBittorrent 实例中的既有任务。
 
 ## 自动化怎么配置
 

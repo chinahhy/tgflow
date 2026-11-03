@@ -10,12 +10,12 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("optional sharing flag", () => {
+describe("permanently disabled dev sharing", () => {
   it("stays disabled until settings are known", () => {
     expect(renderHook(useShareEnabled).result.current).toBe(false);
   });
   it.each([false, "false", true, "true"])(
-    "parses server value %s explicitly",
+    "ignores server value %s",
     (value) => {
       const wrapper = ({ children }: { children: ReactNode }) => (
         <SettingsContext.Provider
@@ -30,15 +30,18 @@ describe("optional sharing flag", () => {
         </SettingsContext.Provider>
       );
       expect(renderHook(useShareEnabled, { wrapper }).result.current).toBe(
-        value === true || value === "true",
+        false,
       );
     },
   );
-  it("does not treat a cached string false as enabled", () => {
-    localStorage.setItem(
-      "telegram-files:share-enabled",
-      JSON.stringify("false"),
-    );
-    expect(renderHook(useShareEnabled).result.current).toBe(false);
-  });
+  it.each([true, "true", false, "false"])(
+    "ignores cached value %s",
+    (value) => {
+      localStorage.setItem(
+        "telegram-files:share-enabled",
+        JSON.stringify(value),
+      );
+      expect(renderHook(useShareEnabled).result.current).toBe(false);
+    },
+  );
 });

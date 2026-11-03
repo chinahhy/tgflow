@@ -154,14 +154,15 @@ public class Config {
 
     public static ShareConfiguration shareConfiguration() {
         return ShareConfiguration.from(
-                System.getenv(),
+                // TGFlow dev ignores legacy sharing settings, including SHARE_ENABLED=true.
+                Map.of(),
                 Path.of(APP_ROOT),
                 Path.of(TELEGRAM_ROOT)
         );
     }
 
     public static TorrentConfiguration torrentConfiguration(ShareConfiguration shareConfiguration) {
-        return TorrentConfiguration.from(System.getenv(), shareConfiguration.sharedRoot());
+        return TorrentConfiguration.from(Map.of(), shareConfiguration.sharedRoot());
     }
 
     public static SecretStore shareSecretStore() {

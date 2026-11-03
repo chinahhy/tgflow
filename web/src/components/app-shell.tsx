@@ -16,7 +16,6 @@ import {
   Menu,
   Send,
   LogOut,
-  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +32,6 @@ import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAdminSession } from "@/hooks/use-admin-session";
 import { TooltipWrapper } from "@/components/ui/tooltip";
-import { useShareEnabled } from "@/hooks/use-share-enabled";
 
 const navigation = [
   { href: "/", label: "Overview", icon: Home },
@@ -49,7 +47,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   useLocale();
   const pathname = usePathname();
   const search = useSearchParams();
-  const shareEnabled = useShareEnabled();
   const [collapsed, setCollapsed] = useLocalStorage(
     "tgflow.sidebar.collapsed",
     false,
@@ -61,12 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname === "/accounts" && search.has("id") ? "/chats" : pathname;
   const links = (compact: boolean) => (
     <nav aria-label={t("Main navigation")} className="flex flex-col gap-3 px-3">
-      {[
-        ...navigation,
-        ...(shareEnabled
-          ? [{ href: "/share", label: "Sharing", icon: Share2 }]
-          : []),
-      ].map(({ href, label, icon: Icon }) => (
+      {navigation.map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
           href={href}

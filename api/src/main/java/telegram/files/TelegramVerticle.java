@@ -22,8 +22,6 @@ import org.drinkless.tdlib.TdApi;
 import org.jooq.lambda.tuple.Tuple;
 import org.jooq.lambda.tuple.Tuple2;
 import telegram.files.repository.*;
-import telegram.files.share.HttpSeedCoordinatorClient;
-import telegram.files.share.UnifiedFileDownloadService;
 
 import java.io.File;
 import java.util.*;
@@ -68,8 +66,6 @@ public class TelegramVerticle extends AbstractVerticle {
 
     private long lastFileDownloadEventTime;
 
-    private UnifiedFileDownloadService unifiedFileDownloadService;
-
     private enum ClientLifecycle { STARTING, ACTIVE, STOPPING, SLEEPING, CLOSED }
 
     private final Object lifecycleLock = new Object();
@@ -103,11 +99,6 @@ public class TelegramVerticle extends AbstractVerticle {
         this.rootPath = telegramRecord.rootPath();
         this.proxyName = telegramRecord.proxy();
         this.gatewayFactory = Objects.requireNonNull(gatewayFactory, "gatewayFactory");
-    }
-
-    TelegramVerticle withUnifiedFileDownloadService(UnifiedFileDownloadService service) {
-        this.unifiedFileDownloadService = service;
-        return this;
     }
 
     public String getRootId() {
@@ -438,23 +429,7 @@ public class TelegramVerticle extends AbstractVerticle {
     }
 
     public Future<FileRecord> startDownload(Long chatId, Long messageId, Integer fileId) {
-        if (unifiedFileDownloadService == null) {
-            return startTelegramDownload(chatId, messageId, fileId);
-        }
-        return client.execute(new TdApi.GetFile(fileId)).compose(file ->
-                unifiedFileDownloadService.downloadIfAvailable(file.remote.uniqueId, file.size)
-                        .recover(failure -> {
-                            String reason = failure instanceof HttpSeedCoordinatorClient.SeedProtocolException protocol
-                                    ? "platform status=" + protocol.statusCode() + " code=" + protocol.errorCode()
-                                    : failure.getClass().getSimpleName();
-                            log.debug("[{}] Seed download unavailable for {}: {}",
-                                    getRootId(), file.remote.uniqueId, reason);
-                            return Future.succeededFuture(false);
-                        })
-                        .compose(handled -> handled
-                                ? ensureFileRecord(chatId, messageId, file)
-                                : startTelegramDownload(chatId, messageId, fileId))
-        );
+        return startTelegramDownload(chatId, messageId, fileId);
     }
 
     private Future<FileRecord> ensureFileRecord(Long chatId, Long messageId, TdApi.File file) {
@@ -624,13 +599,7 @@ public class TelegramVerticle extends AbstractVerticle {
     }
 
     public Future<Void> cancelDownload(Integer fileId) {
-        if (unifiedFileDownloadService == null) return cancelTelegramDownload(fileId);
-        return client.execute(new TdApi.GetFile(fileId)).compose(file ->
-                unifiedFileDownloadService.controlIfPresent(file.remote.uniqueId, "CANCEL_V1")
-                        .compose(handled -> handled
-                                ? Future.succeededFuture()
-                                : cancelTelegramDownload(fileId))
-        );
+        return cancelTelegramDownload(fileId);
     }
 
     private Future<Void> cancelTelegramDownload(Integer fileId) {
@@ -659,14 +628,7 @@ public class TelegramVerticle extends AbstractVerticle {
     }
 
     public Future<Void> togglePauseDownload(Integer fileId, boolean isPaused) {
-        if (unifiedFileDownloadService == null) return toggleTelegramDownload(fileId, isPaused);
-        String controlType = isPaused ? "PAUSE_V1" : "RESUME_V1";
-        return client.execute(new TdApi.GetFile(fileId)).compose(file ->
-                unifiedFileDownloadService.controlIfPresent(file.remote.uniqueId, controlType)
-                        .compose(handled -> handled
-                                ? Future.succeededFuture()
-                                : toggleTelegramDownload(fileId, isPaused))
-        );
+        return toggleTelegramDownload(fileId, isPaused);
     }
 
     private Future<Void> toggleTelegramDownload(Integer fileId, boolean isPaused) {

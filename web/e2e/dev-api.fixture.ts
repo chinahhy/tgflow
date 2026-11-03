@@ -82,7 +82,7 @@ export function devFiles(): TelegramFile[] {
 
 export async function installDevApi(
   page: Page,
-  options: { sparse?: boolean } = {},
+  options: { sparse?: boolean; shareEnabled?: boolean | string } = {},
 ) {
   const files = devFiles();
   const writes: {
@@ -182,7 +182,7 @@ export async function installDevApi(
       body = [{ id: "-100", name: "测试频道", type: "channel", auto }];
     else if (path === "/settings")
       body = {
-        shareEnabled: false,
+        shareEnabled: options.shareEnabled ?? false,
         speedUnits: "bytes",
         tags: "",
         autoDownloadLimit: "2",

@@ -112,6 +112,10 @@ public class TelegramConverter {
     }
 
     public static Future<List<JsonObject>> enrichSeedAssociations(List<JsonObject> files) {
+        if (!Config.shareConfiguration().enabled()) {
+            files.forEach(file -> enrichTelegramFile(file, null, null));
+            return DownloadFailures.enrich(files);
+        }
         List<String> uniqueIds = files.stream().map(file -> file.getString("uniqueId"))
                 .filter(Objects::nonNull).toList();
         return Future.all(

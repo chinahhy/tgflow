@@ -9,9 +9,39 @@ import telegram.files.repository.TorrentRecord;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TelegramConverterTest {
+
+    @Test
+    void disabledSharingKeepsTelegramFileMetadataWithoutSeedRepositories() {
+        var previousPool = DataVerticle.pool;
+        var previousTorrents = DataVerticle.torrentRepository;
+        var previousShares = DataVerticle.shareSourceRepository;
+        try {
+            DataVerticle.pool = null;
+            DataVerticle.torrentRepository = null;
+            DataVerticle.shareSourceRepository = null;
+            JsonObject file = new JsonObject().put("uniqueId", "telegram-file")
+                    .put("fileName", "original.mp4").put("loaded", true);
+
+            var result = TelegramConverter.enrichSeedAssociations(List.of(file));
+
+            assertTrue(result.succeeded());
+            JsonObject enriched = result.result().getFirst();
+            assertEquals("TELEGRAM", enriched.getString("source"));
+            assertEquals("original.mp4", enriched.getString("fileName"));
+            assertTrue(enriched.getBoolean("loaded"));
+            assertFalse(enriched.getBoolean("seedAvailable"));
+            assertFalse(enriched.getBoolean("sharedByMe"));
+            assertEquals(0L, enriched.getLong("torrentUploadSpeed"));
+        } finally {
+            DataVerticle.pool = previousPool;
+            DataVerticle.torrentRepository = previousTorrents;
+            DataVerticle.shareSourceRepository = previousShares;
+        }
+    }
 
     @Test
     void convertsSeedOnlyTorrentInConverter() {

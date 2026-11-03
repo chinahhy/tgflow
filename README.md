@@ -16,7 +16,7 @@ TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可
 - 图片及视频预览、下载速度和文件统计。
 - 预加载、按规则自动下载、下载后转移及重复文件处理。
 - 管理员初始化、会话认证及移动端界面。
-- 保留上游可选的 telegram-seed 分享模块；默认关闭，基础下载不依赖它。
+- dev 永久禁用 telegram-seed 平台分享、BT 下载与做种；普通 Telegram 下载不受影响。
 
 ## 语言
 
@@ -82,9 +82,9 @@ Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例�
 
 Compose 只固定配置 `TZ=Asia/Shanghai`、`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`、`SHARE_ENABLED=false`。程序默认使用 `prod`、SQLite，并自动处理当前来源与 Cookie，无需在 Compose 重复填写。两个根目录必须保留，以对应 SSD 配置盘和 HDD 下载盘的挂载。
 
-需要额外跨域前端或固定 Cookie 策略时，在 Compose 的 `environment` 中显式添加 `HTTP_ALLOWED_ORIGINS` 或 `HTTP_SECURE_COOKIES`；精简文件不再转发这两个变量，仅写入宿主机 `.env` 不会生效。可选的 qBittorrent 下载／做种与平台分享模块完整保留，配置方式见 [dev 使用指南](docs/dev-guide.md#qbittorrent-保留情况)。
+需要额外跨域前端或固定 Cookie 策略时，在 Compose 的 `environment` 中显式添加 `HTTP_ALLOWED_ORIGINS` 或 `HTTP_SECURE_COOKIES`；精简文件不再转发这两个变量，仅写入宿主机 `.env` 不会生效。dev 已移除分享后台的启动和下载接入，`SHARE_ENABLED=true`、旧数据库设置或 qBittorrent 环境变量均无法开启。详见 [分享与 BT 禁用说明](docs/dev-guide.md#分享与-bt-永久禁用)。
 
-上游仍支持外部数据库（`DB_TYPE`、`DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`）以及可选分享和 AI 配置；精简示例不会自动启用这些功能。完整运行参数以 `api/src/main/java/telegram/files/Config.java` 及 `share/ShareConfiguration.java` 为准。
+仍可按上游方式配置外部数据库（`DB_TYPE`、`DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`）和 AI；dev 的平台分享与 BT 模块固定禁用。完整运行参数以 `api/src/main/java/telegram/files/Config.java` 及 `share/ShareConfiguration.java` 为准。
 
 ### 获取 Telegram API ID / Hash
 
@@ -159,7 +159,7 @@ PR 不执行镜像发布。`main` 只发布 `latest`，`dev` 只发布 `dev`。�
 
 **为什么无法下载或登录 Telegram？** 检查 API ID / Hash、验证码、两步验证、代理和 NAS 到 Telegram 的网络连接。浏览器语言设置不会改变 Telegram 网络路由。
 
-**为什么分享相关功能不可用？** 默认 `SHARE_ENABLED=false`。此任务保留上游模块，但不会部署 telegram-seed 或 qBittorrent。
+**为什么没有分享与 BT 功能？** dev 在代码中永久禁用平台绑定、资源发布、BT 下载和做种；没有可开启的环境变量或界面开关。普通 Telegram 下载、自动化和本地预览仍可使用。
 
 **中文设置没有保存？** 检查浏览器是否允许本地存储，以及是否使用同一个来源地址。禁用存储时仍可切换，但新页面无法恢复偏好。
 

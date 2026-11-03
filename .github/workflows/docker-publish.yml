@@ -92,6 +92,8 @@ jobs:
             fi
             docker rm -f tgflow-secure
           done
+      - name: Verify sharing and BT cannot be enabled
+        run: python3 scripts/test-sharing-disabled.py --image tgflow:ci
       - name: Determine branch tag and Docker Hub readiness
         id: release
         env:
@@ -129,9 +131,9 @@ jobs:
       - name: Capture container failure details
         if: failure()
         run: |
-          for container_name in tgflow-smoke tgflow-secure tgflow-https-proxy; do
+          for container_name in tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked; do
             docker logs "$container_name" 2>&1 | sed '/one-time bootstrap code/d' || true
           done
       - name: Remove smoke-test container
         if: always()
-        run: docker rm -f tgflow-smoke tgflow-secure tgflow-https-proxy || true
+        run: docker rm -f tgflow-smoke tgflow-secure tgflow-https-proxy tgflow-share-blocked || true

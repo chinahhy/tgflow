@@ -10,7 +10,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
 import telegram.files.repository.TelegramRecord;
-import telegram.files.share.UnifiedFileDownloadService;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -23,8 +22,6 @@ public class TelegramVerticles {
 
     private static final List<TelegramVerticle> telegramVerticles = new ArrayList<>();
 
-    private static UnifiedFileDownloadService unifiedFileDownloadService;
-
     private static TelegramGatewayFactory telegramGatewayFactory = TelegramGatewayFactory.tdlib();
 
     static void configureTelegramGatewayFactory(TelegramGatewayFactory factory) {
@@ -35,19 +32,12 @@ public class TelegramVerticles {
         telegramGatewayFactory = TelegramGatewayFactory.tdlib();
     }
 
-    public static void configureUnifiedFileDownloadService(UnifiedFileDownloadService service) {
-        unifiedFileDownloadService = service;
-        telegramVerticles.forEach(telegram -> telegram.withUnifiedFileDownloadService(service));
-    }
-
     public static TelegramVerticle create(String rootPath) {
-        return new TelegramVerticle(rootPath, telegramGatewayFactory)
-                .withUnifiedFileDownloadService(unifiedFileDownloadService);
+        return new TelegramVerticle(rootPath, telegramGatewayFactory);
     }
 
     public static TelegramVerticle create(TelegramRecord record) {
-        return new TelegramVerticle(record, telegramGatewayFactory)
-                .withUnifiedFileDownloadService(unifiedFileDownloadService);
+        return new TelegramVerticle(record, telegramGatewayFactory);
     }
 
     public static Future<Void> initTelegramVerticles(Vertx vertx) {

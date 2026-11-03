@@ -4,8 +4,6 @@ import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import telegram.files.share.ShareConfiguration;
-import telegram.files.share.ShareVerticle;
 
 import java.time.Duration;
 
@@ -50,31 +48,13 @@ public class Start {
     }
 
     private static Future<Void> deployVerticles(Vertx vertx) {
-        ShareConfiguration shareConfiguration = Config.shareConfiguration();
         DataVerticle dataVerticle = new DataVerticle();
         HttpVerticle httpVerticle = new HttpVerticle();
         return vertx.deployVerticle(dataVerticle)
-                .compose(_ -> deployShareVerticle(vertx, httpVerticle, shareConfiguration))
                 .compose(_ -> vertx.deployVerticle(httpVerticle)
                         .onFailure(err -> log.error("Deploy http verticle failed", err))
                 )
                 .mapEmpty();
     }
 
-    private static Future<Void> deployShareVerticle(
-            Vertx vertx,
-            HttpVerticle httpVerticle,
-            ShareConfiguration configuration
-    ) {
-        if (!configuration.enabled()) {
-            return Future.succeededFuture();
-        }
-        return ShareRuntime.initialize(vertx, httpVerticle, configuration)
-                .compose(shareVerticle -> deployShareVerticle(vertx, shareVerticle));
-    }
-
-    private static Future<Void> deployShareVerticle(Vertx vertx, ShareVerticle shareVerticle) {
-        return vertx.deployVerticle(shareVerticle)
-                .mapEmpty();
-    }
 }
