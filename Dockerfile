@@ -25,7 +25,7 @@ ENV JAVA_HOME=/jre \
     PATH="/jre/bin:$PATH" \
     LANG=C.UTF-8 \
     NGINX_PORT=8026 \
-    APP_ROOT=/app/data \
+    APP_ROOT=/data \
     DOWNLOAD_ROOT=/downloads
 
 RUN --mount=type=cache,target=/var/cache/apk \
@@ -34,7 +34,9 @@ RUN --mount=type=cache,target=/var/cache/apk \
     apk add --update-cache nginx wget curl unzip tini su-exec gettext openssl3 libstdc++ gcompat libc6-compat && \
     rm -rf /tmp/* /var/tmp/* && \
     touch /run/nginx.pid && \
-    chown -R tf:tf /app /etc/nginx /var/lib/nginx /var/log/nginx /run/nginx.pid && \
+    mkdir -p /data && \
+    ln -s /data /app/data && \
+    chown -R tf:tf /app /data /etc/nginx /var/lib/nginx /var/log/nginx /run/nginx.pid && \
     printf '#!/bin/sh\njava -Djava.library.path=/app/tdlib -cp /app/api.jar telegram.files.Maintain "$@"\n' > /usr/bin/tfm && \
     chmod +x /usr/bin/tfm
 

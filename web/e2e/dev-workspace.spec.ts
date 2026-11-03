@@ -156,7 +156,7 @@ test("desktop routes, collapse, recorded failures and task control use live API 
   await page.getByRole("tab", { name: "存储", exact: true }).click();
   await expect(page).toHaveURL(/tab=storage/);
   await expect(page.getByText("/downloads", { exact: true })).toBeVisible();
-  await expect(page.getByText("/app/data", { exact: true })).toBeVisible();
+  await expect(page.getByText("/data", { exact: true })).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("tab", { name: "存储", exact: true }),

@@ -12,6 +12,8 @@ import io.vertx.core.VertxException;
 import telegram.files.repository.TelegramRecord;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -46,17 +48,17 @@ public class TelegramVerticles {
         if (restoring != null && !restoring.isComplete()) return restoring;
         restoring = DataVerticle.telegramRepository.getAll()
                 .compose(telegramRecords -> {
-                    var loadedPaths = telegramVerticles.stream().map(item -> item.rootPath).collect(java.util.stream.Collectors.toSet());
-                    List<String> verifiedPath = telegramRecords.stream().map(TelegramRecord::rootPath).toList();
+                    var loadedPaths = telegramVerticles.stream().map(item -> accountPathIdentity(item.rootPath)).collect(java.util.stream.Collectors.toSet());
+                    var verifiedPaths = telegramRecords.stream().map(record -> accountPathIdentity(record.rootPath())).collect(java.util.stream.Collectors.toSet());
                     File telegramRoot = FileUtil.file(Config.TELEGRAM_ROOT);
                     List<String> uncertifiedPaths = FileUtil.loopFiles(telegramRoot, 1, null)
                             .stream()
-                            .filter(f -> f.isDirectory() && !verifiedPath.contains(f.getAbsolutePath()))
+                            .filter(f -> f.isDirectory() && !verifiedPaths.contains(accountPathIdentity(f.getAbsolutePath())))
                             .map(File::getAbsolutePath)
                             .toList();
                     List<Future<String>> futures = new ArrayList<>();
                     for (TelegramRecord telegramRecord : telegramRecords) {
-                        if (loadedPaths.contains(telegramRecord.rootPath())) continue;
+                        if (loadedPaths.contains(accountPathIdentity(telegramRecord.rootPath()))) continue;
                         TelegramVerticle telegramVerticle = create(telegramRecord);
                         if (!telegramVerticle.check()) {
                             continue;
@@ -66,7 +68,7 @@ public class TelegramVerticles {
                     }
                     if (CollUtil.isNotEmpty(uncertifiedPaths)) {
                         for (String uncertifiedPath : uncertifiedPaths) {
-                            if (loadedPaths.contains(uncertifiedPath)) continue;
+                            if (loadedPaths.contains(accountPathIdentity(uncertifiedPath))) continue;
                             TelegramVerticle telegramVerticle = create(uncertifiedPath);
                             if (!telegramVerticle.check()) {
                                 continue;
@@ -89,6 +91,15 @@ public class TelegramVerticles {
 
     public static void remove(TelegramVerticle telegramVerticle) {
         telegramVerticles.remove(telegramVerticle);
+    }
+
+    static String accountPathIdentity(String rootPath) {
+        Path path = Path.of(rootPath).toAbsolutePath().normalize();
+        try {
+            return path.toRealPath().toString();
+        } catch (IOException ignored) {
+            return path.toString();
+        }
     }
 
     public static List<TelegramVerticle> getAll() {

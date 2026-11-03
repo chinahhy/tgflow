@@ -215,7 +215,7 @@ export async function installDevApi(
           name: "测试账号",
           phoneNumber: "+10000000000",
           status: "active",
-          rootPath: "/app/data/account/test",
+          rootPath: "/data/account/test",
         },
       ];
     else if (path === "/telegram/1/chats")
@@ -231,7 +231,7 @@ export async function installDevApi(
       };
     else if (path === "/storage")
       body = {
-        appRoot: "/app/data",
+        appRoot: "/data",
         downloadRoot: "/downloads",
         filesRoot: "/downloads/files",
       };

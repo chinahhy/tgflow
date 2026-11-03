@@ -26,26 +26,18 @@
 
 ## SSD 与 HDD 分开存储
 
-复制仓库的 `.env.example` 为 `.env`。将下列示例路径换成主机的实际路径，不要直接照抄磁盘名称：
-
-```dotenv
-CONFIG_DIR=/path/on/ssd/tgflow-dev/config
-DOWNLOAD_DIR=/path/on/hdd/tgflow-dev/downloads
-PORT=8026
-```
-
-Compose 中的两处绑定挂载为：
+默认 Compose 使用 `./tgflow:/data` 和 `./downloads:/downloads`，无需 `.env` 文件。需要分盘时，直接将左侧改成实际的 SSD 配置目录与 HDD 下载目录，例如：
 
 ```yaml
 volumes:
-  - ${CONFIG_DIR:-${DATA_DIR:-./data}}:/app/data
-  - ${DOWNLOAD_DIR:-./downloads}:/downloads
+  - /path/on/ssd/tgflow-dev/tgflow:/data
+  - /path/on/hdd/tgflow-dev/downloads:/downloads
 ```
 
 | 主机目录 | 容器路径 | 保存内容 |
 | --- | --- | --- |
-| `CONFIG_DIR`，建议 SSD | `/app/data` | SQLite 数据库、TDLib 账号会话与索引、设置、日志 |
-| `DOWNLOAD_DIR`，建议 HDD | `/downloads` | TDLib 下载暂存、缩略图缓存和最终附件 |
+| `./tgflow` 或指定的 SSD 目录 | `/data` | SQLite 数据库、TDLib 账号会话与索引、设置、日志 |
+| `./downloads` 或指定的 HDD 目录 | `/downloads` | TDLib 下载暂存、缩略图缓存和最终附件 |
 
 程序同时设置 TDLib 的 `databaseDirectory` 和 `filesDirectory`，所以大文件的下载暂存也位于 HDD。下载根目录内的结构为：
 
@@ -57,7 +49,7 @@ volumes:
 
 正常文件名（包括中文、空格、大小写和扩展名）原样保留，不加说明文字或消息编号。不同消息里的同名文件通过父目录隔离。无文件名的附件采用 Telegram／TDLib 提供的后备名称；路径分隔符、控制字符等不适用于文件名的字符会替换，过长名称按 UTF-8 长度裁剪，并尽量保留扩展名。同一文件的重复完成通知可重入，不覆盖另一个大小不符的目标。
 
-“设置 → 存储”显示实际容器目录，主机路径仍在 Compose 修改。使用非 root 的 `PUID/PGID` 时，两个专用目录及已有子目录须允许该 UID/GID 读写；启动脚本只调整下载挂载根目录的所有者，不递归改动整个 HDD。
+“设置 → 存储”显示实际容器目录，主机路径仍在 Compose 修改。使用非 root 的 `PUID/PGID` 时，两个专用目录及已有子目录须允许该 UID/GID 读写；启动脚本调整配置目录的所有者，但对下载目录只调整挂载根目录，不递归改动整个 HDD。
 
 确认访问地址和目录后，在该部署目录执行：
 
@@ -82,7 +74,7 @@ API ID / Hash 供所有账号共用；Telegram 日志级别在“高级设置”
 
 建议给 dev 使用独立项目名、端口、配置目录和下载目录。不要让 main、dev 或原项目同时写同一数据库、账号会话或下载目录。
 
-`DATA_DIR` 保留为配置目录的兼容后备；如果 `.env` 同时配置了 `CONFIG_DIR`，以它为准。已有部署不要误指向一个新空目录而以为账号丢失。升级前停止自己的 TGFlow 实例，备份完整配置目录、下载目录及 `.env`；恢复时使用同一次备份。
+新示例不再读取 `.env` 中的 `PORT`、`CONFIG_DIR`、`DATA_DIR`、`DOWNLOAD_DIR`、`PUID/PGID`；直接修改 Compose 中对应数值或挂载左侧路径。已有部署必须沿用原主机配置目录并挂载到 `/data`，例如原来是 `./config:/app/data`，现在写 `./config:/data`。不要将已有数据误指向新建的空目录。镜像内部保留 `/app/data` 指向 `/data` 的兼容路径，让旧账号和文件记录继续可用；新记录使用 `/data`。升级前停止自己的 TGFlow 实例，备份完整配置目录、下载目录及 `.env`；恢复时使用同一次备份。
 
 本版本不会批量重命名或迁移历史已完成文件，原有效路径继续可用；新完成的下载才进入新的原名目录。正在下载的旧任务及旧文件的处理应先在独立备份上验证。直接切回旧镜像不能保证旧版理解 dev 的文件路径；回退应恢复对应镜像与匹配的数据备份。开发和发布本身不操作 NAS 上的现有容器。
 
@@ -96,7 +88,7 @@ API ID / Hash 供所有账号共用；Telegram 日志级别在“高级设置”
 - Cookie 默认为自动：HTTP 使用普通 Cookie，HTTPS 使用 Secure Cookie；管理员会话、CSRF Cookie 和 Telegram Web 会话保持一致。局域网 IP 的 HTTP 登录与域名的 HTTPS 登录可各自使用。
 - 外层反代保留 Host 或 `X-Forwarded-Host`（含端口），设置实际 `X-Forwarded-Proto` 并转发 WebSocket。容器保留有效的外部主机和协议，应用只接受本机 Nginx 传来的这些信息。
 
-Compose 使用固定镜像 `hoya0803/tgflow:dev`。`APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads` 已作为镜像默认值，日志默认为 `INFO`，无需在 Compose 填写。只修改挂载的主机路径，配置和下载仍分别落在 SSD 与 HDD。程序继续采用生产模式、SQLite 与自动来源 / Cookie 策略。
+Compose 使用固定镜像 `hoya0803/tgflow:dev`。`APP_ROOT=/data`、`DOWNLOAD_ROOT=/downloads` 已作为镜像默认值，日志默认为 `INFO`，无需在 Compose 填写。只修改挂载的主机路径，配置和下载仍分别落在 SSD 与 HDD。程序继续采用生产模式、SQLite 与自动来源 / Cookie 策略。
 
 镜像自带 Docker 定期健康检查，每 30 秒访问本容器的 `/api/health`，仅标记服务状态，不会单凭 `unhealthy` 自动重启。旧 Compose 中重复的 `healthcheck` 可以删除，无需另建应用或 NAS 定时任务。
 

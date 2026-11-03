@@ -46,7 +46,7 @@ jobs:
       - name: Smoke test the built container
         run: |
           docker run -d --name tgflow-smoke \
-            -v "$RUNNER_TEMP/tgflow-state:/app/data" \
+            -v "$RUNNER_TEMP/tgflow-state:/data" \
             -v "$RUNNER_TEMP/tgflow-downloads:/downloads" \
             -p 127.0.0.1:8026:8026 tgflow:ci
           for attempt in $(seq 1 60); do
@@ -56,7 +56,7 @@ jobs:
           curl --fail --silent http://127.0.0.1:8026/api/health
           curl --fail --silent http://127.0.0.1:8026/ | grep -q TGFlow
           curl --fail --silent http://127.0.0.1:8026/api/auth/bootstrap/status | grep -q true
-          docker exec tgflow-smoke sh -c 'test -f /app/data/data.db && test -d /downloads'
+          docker exec tgflow-smoke sh -c 'test -f /data/data.db && test "$(readlink -f /app/data)" = /data && test -d /downloads'
           for attempt in $(seq 1 60); do
             if [ "$(docker inspect --format '{{.State.Health.Status}}' tgflow-smoke)" = healthy ]; then break; fi
             sleep 2
@@ -93,6 +93,7 @@ jobs:
               extra_origin+=( --extra-origin http://legacy.example.test:6543 )
             fi
             docker run -d --name tgflow-secure \
+              -v "$RUNNER_TEMP/tgflow-legacy-$mode:/app/data" \
               -e APP_ENV=prod -e APP_ROOT=/app/data -e DOWNLOAD_ROOT=/downloads \
               -e TELEGRAM_API_ID=1 -e TELEGRAM_API_HASH=test-only-placeholder \
               -e SHARE_ENABLED=false "${cookie_env[@]}" \
@@ -102,6 +103,8 @@ jobs:
               docker logs tgflow-https-proxy
               exit 1
             fi
+            docker exec tgflow-secure sh -ec 'test -f /data/data.db && test -f /app/data/data.db'
+            test -s "$RUNNER_TEMP/tgflow-legacy-$mode/data.db"
             docker rm -f tgflow-secure
           done
       - name: Verify sharing and BT cannot be enabled

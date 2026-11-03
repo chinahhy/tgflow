@@ -76,8 +76,9 @@ def verify_case(image, server, malformed):
     with tempfile.TemporaryDirectory(prefix="tgflow-sharing-test-") as root:
         state = Path(root) / "state"
         state.mkdir()
+        (state / "path-compatibility-probe").write_text("tgflow-path-fixture")
         environment = {
-            "APP_ENV": "dev", "APP_ROOT": "/app/data", "DOWNLOAD_ROOT": "/downloads",
+            "APP_ENV": "dev",
             "NGINX_PORT": "18027",
             "PUID": str(os.getuid()), "PGID": str(os.getgid()),
             "SHARE_ENABLED": "true", "SEED_PLATFORM_URL": endpoint,
@@ -87,10 +88,10 @@ def verify_case(image, server, malformed):
         }
         if malformed:
             environment.update(SEED_PLATFORM_URL="invalid legacy URL", QBITTORRENT_URL="invalid legacy URL",
-                SHARE_CONCURRENCY="invalid", SHARED_ROOT="/app/data/account/overlap",
+                SHARE_CONCURRENCY="invalid", SHARED_ROOT="/data/account/overlap",
                 PEER_LISTEN_PORT="0", SHARE_STATISTICS_ROLLOUT_PERCENT="101")
         command = ["docker", "run", "-d", "--name", container, "--network", "host",
-            "-v", f"{state}:/app/data", "-v", f"{root}/downloads:/downloads"]
+            "-v", f"{state}:/data", "-v", f"{root}/downloads:/downloads"]
         for name, value in environment.items():
             command.extend(["-e", f"{name}={value}"])
         try:
@@ -104,6 +105,9 @@ def verify_case(image, server, malformed):
             credentials = {"username": "sharing-test-admin", "password": "Disposable-sharing-test-password"}
             assert client.request("/api/auth/bootstrap", {**credentials, "bootstrapToken": match[1]})[0] == 201
             assert client.request("/api/auth/session")[0] == 200
+            subprocess.run(["docker", "exec", container, "sh", "-ec",
+                'test "$APP_ROOT" = /data; test "$(cat /app/data/path-compatibility-probe)" = tgflow-path-fixture; '
+                'test "$(stat -c %u /data/data.db)" = "$PUID"'], check=True, capture_output=True)
             assert client.request("/")[0] == 200
             assert client.request("/share")[0] == 404, "Removed frontend page was exported"
 
@@ -129,6 +133,9 @@ def verify_case(image, server, malformed):
             status, restored = client.request("/api/telegram/application")
             assert status == 200 and restored["configured"] is True and restored["apiId"] == 123456
             assert restored["logLevel"] == 2 and restored["source"] == "saved" and "apiHash" not in restored
+            subprocess.run(["docker", "exec", container, "sh", "-ec",
+                'test -f /data/telegram-application.json; test -f /app/data/telegram-application.json; '
+                'test "$(stat -c %u /data/telegram-application.json)" = "$PUID"'], check=True, capture_output=True)
             assert client.request("/api/settings?keys=shareEnabled")[1]["shareEnabled"] is False
             assert client.request("/api/settings/create", {"shareEnabled": True})[0] == 200
             assert client.request("/api/settings?keys=shareEnabled")[1]["shareEnabled"] is False
@@ -154,7 +161,7 @@ def verify_case(image, server, malformed):
             assert client.request("/api/files?downloadStatus=completed")[0] == 200
             time.sleep(2)
             assert server.hits == [], f"Unexpected platform/qBittorrent requests: {server.hits}"
-            print(f"Sharing disabled ({'malformed' if malformed else 'enabled'} legacy settings): APIs blocked, no platform/qBittorrent requests; zero-env Telegram configuration saved and restored")
+            print(f"Sharing disabled ({'malformed' if malformed else 'enabled'} legacy settings): APIs blocked, no platform/qBittorrent requests; zero-env Telegram configuration saved and restored on /data, legacy path and non-root ownership verified")
         except Exception:
             logs = subprocess.run(["docker", "logs", container], capture_output=True, text=True)
             print("\n".join(line for line in (logs.stdout + logs.stderr).splitlines()

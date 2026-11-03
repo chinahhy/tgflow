@@ -39,21 +39,36 @@ TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可
 
 适用于极空间 Z4Pro、Dockge 及一般 AMD64 Linux 主机：单容器、SQLite、默认端口 `8026`、时区 `Asia/Shanghai`、`restart: unless-stopped`。基础 Telegram 下载不需要 PostgreSQL、MySQL 或 qBittorrent。
 
-1. 在新的部署目录放入 [docker-compose.yaml](docker-compose.yaml) 和 [.env.example](.env.example)，将后者复制为 `.env`。
-2. 镜像地址固定为 `hoya0803/tgflow:dev`，只需调整实际存储路径；Telegram 凭据在启动后的 WebUI 中配置。
-3. 确认 `PORT` 对应的主机端口可用；普通 HTTP 或 HTTPS 反代无需填写来源和 Cookie 参数。
-4. 启动：
+将以下内容保存为 `docker-compose.yaml`，无需 `.env` 文件：
+
+```yaml
+services:
+  tgflow:
+    image: hoya0803/tgflow:dev
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      PUID: 0
+      PGID: 0
+    ports:
+      - "8026:8026"
+    volumes:
+      - ./tgflow:/data
+      - ./downloads:/downloads
+```
+
+`./tgflow` 保存配置，`./downloads` 保存下载。需要分开使用 SSD 和 HDD 时，直接修改两处挂载左侧的主机路径；右侧保持 `/data` 与 `/downloads`。Telegram 凭据在容器启动后的 WebUI 中配置。
+
+在 Compose 文件所在目录启动：
 
 ```bash
-cp .env.example .env
-# 按需编辑 .env 中的主机路径。
 docker compose config --quiet
 docker compose pull
 docker compose up -d
 docker compose logs -f tgflow
 ```
 
-Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例访问地址为 `http://NAS地址:8026`。若已有服务占用端口，修改 `PORT` 并让反代使用该主机端口即可，容器内部仍为 `8026`。
+Dockge 可直接使用上述 Compose。默认访问 `http://NAS地址:8026`。若主机端口已被占用，将 `8026:8026` 左侧改为可用端口，并让反代使用该主机端口，容器内部仍为 `8026`。
 
 **已有官方 Telegram Files 实例时，请使用新的 Compose 项目名和独立数据目录。不要让两个实例同时写入同一 SQLite 数据库或 Telegram 会话目录。** 本项目的仓库构建不需要操作已有 NAS 容器。
 
@@ -65,17 +80,11 @@ Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例�
 
 `HTTP_ALLOWED_ORIGINS` 只用于额外跨域前端；`HTTP_SECURE_COOKIES=true/false` 仍可显式覆盖自动策略。正常自用部署可省略它们。旧部署升级时，将 `6543:80` 改为 `8026:8026`；若想保留旧主机端口，可改为 `6543:8026`；健康检查由新镜像自带，无需在 Compose 重复填写。原来固定的 Cookie 参数建议删除或改为 `auto`。详见 [反向代理配置](docs/dev-guide.md#https-反向代理)。
 
-### 环境变量
+### 默认配置与可选覆盖
 
-| 变量 | 说明 |
-| --- | --- |
-| `PORT` | 主机端口，默认 `8026`，容器入口 `8026` |
-| `CONFIG_DIR` | 应用状态目录，示例 `./config`，建议 SSD |
-| `DOWNLOAD_DIR` | 下载暂存与完成文件目录，默认 `./downloads`，建议 HDD |
-| `DATA_DIR` | 兼容旧配置；未设置 CONFIG_DIR 时作为应用状态目录 |
-| `PUID` / `PGID` | 可选，挂载目录对应的用户和组 ID，默认 `0` |
+镜像内置 `APP_ROOT=/data`、`DOWNLOAD_ROOT=/downloads`，程序日志默认 `INFO`，Compose 无需填写。端口、主机挂载路径和 `PUID/PGID` 直接在 Compose 中修改；`PORT`、`CONFIG_DIR`、`DATA_DIR`、`DOWNLOAD_DIR` 等旧 `.env` 部署变量不再由新示例读取。`PUID/PGID` 默认使用 `0`；需要其他 UID/GID 时修改对应数值，并确保配置目录与下载目录可读写。
 
-镜像内置 `APP_ROOT=/app/data`、`DOWNLOAD_ROOT=/downloads`，程序日志默认 `INFO`，Compose 无需再写这三项。镜像地址直接写为 `hoya0803/tgflow:dev`，修改 `volumes` 左侧的主机路径或 `.env` 中的 `CONFIG_DIR` / `DOWNLOAD_DIR` 即可分配 SSD 与 HDD。高级使用如需改变容器内目录或日志级别，须在 Compose 的 `environment` 显式覆盖。
+高级使用如需改变容器内目录或日志级别，须在 Compose 的 `environment` 显式覆盖。
 
 镜像自带 Docker 健康检查：每 30 秒请求容器自身的 `/api/health`，超时 10 秒，启动宽限 60 秒，连续失败 3 次标记为 `unhealthy`。它不访问外网，不需要在应用或 NAS 定时任务中重复添加；单凭 `unhealthy` 状态不会自动重启容器。
 
@@ -87,7 +96,7 @@ Dockge 可直接使用仓库根目录的 Compose 文件和环境变量。示例�
 
 登录 [my.telegram.org](https://my.telegram.org)，打开 **API development tools**，创建应用并保存 `api_id` 和 `api_hash`。启动容器并登录管理员后，在“账号管理 → Telegram 应用凭据”填写并保存。它们不是 Bot Token，不能相互替代，也不要写入 README、Issues 或 Git。
 
-API ID / Hash 是所有 Telegram 账号共用的应用凭据，与每个账号的手机号、验证码、两步验证密码不同。保存内容位于配置卷 `/app/data/telegram-application.json`，重建容器后保留；API Hash 不会通过查询接口回显，修改其他字段时可留空保持原值。日志级别默认 `0`，可在同一页面的高级设置中调整，连接初始化时生效。
+API ID / Hash 是所有 Telegram 账号共用的应用凭据，与每个账号的手机号、验证码、两步验证密码不同。保存内容位于配置卷 `/data/telegram-application.json`，重建容器后保留；API Hash 不会通过查询接口回显，修改其他字段时可留空保持原值。日志级别默认 `0`，可在同一页面的高级设置中调整，连接初始化时生效。
 
 旧 Compose 中的 `TELEGRAM_API_ID`、`TELEGRAM_API_HASH`、`TELEGRAM_LOG_LEVEL` 仍作为兼容后备，页面保存值优先。升级时可先保留原环境变量启动新镜像，在页面点击保存完成导入，再移除这三项；若已移除，重新填写原来的凭据即可，已有账号记录和会话目录仍保留，保存后自动恢复连接。仅在宿主机 `.env` 中填写旧变量不会自动传入精简 Compose。
 
@@ -113,7 +122,9 @@ docker compose exec -it tgflow tfm admin apply-reset <管理员用户名>
 
 ### 数据目录与升级
 
-`CONFIG_DIR` 挂载到 `/app/data`，保存数据库、账号会话、索引、配置与日志；`DOWNLOAD_DIR` 挂载到 `/downloads`，保存下载暂存与新完成的原名附件。历史有效文件不批量迁移。目录含义、双硬盘示例与回退要求见 [dev 使用指南](docs/dev-guide.md)。
+`./tgflow` 挂载到 `/data`，保存数据库、账号会话、索引、配置与日志；`./downloads` 挂载到 `/downloads`，保存下载暂存与新完成的原名附件。历史有效文件不批量迁移。目录含义、双硬盘示例与回退要求见 [dev 使用指南](docs/dev-guide.md)。
+
+从旧 `/app/data` 升级时，将原来的**同一个主机配置目录**改挂载到 `/data` 即可，无需移动或重建数据；例如旧目录是 `./config`，就使用 `./config:/data`。镜像保留 `/app/data` 到 `/data` 的内部兼容路径，旧账号及历史文件的绝对路径仍可读取。新示例的 `./tgflow` 仅是默认目录名，不会自动导入其他目录的数据。
 
 升级前，在自己的维护窗口停止 TGFlow 并备份**完整配置目录和下载目录**及 `.env`，避免复制正在写入的 SQLite 数据库。随后：
 

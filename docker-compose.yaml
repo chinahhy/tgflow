@@ -4,10 +4,10 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
-      PUID: ${PUID:-0}
-      PGID: ${PGID:-0}
+      PUID: 0
+      PGID: 0
     ports:
-      - "${PORT:-8026}:8026"
+      - "8026:8026"
     volumes:
-      - ${CONFIG_DIR:-${DATA_DIR:-./data}}:/app/data
-      - ${DOWNLOAD_DIR:-./downloads}:/downloads
+      - ./tgflow:/data
+      - ./downloads:/downloads

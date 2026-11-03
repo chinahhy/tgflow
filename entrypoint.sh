@@ -27,11 +27,13 @@ cleanup() {
 }
 
 setup_permissions() {
-    download_root=${DOWNLOAD_ROOT:-${APP_ROOT:-/app/data}/downloads}
-    mkdir -p "$download_root"
+    app_root=${APP_ROOT:-/data}
+    download_root=${DOWNLOAD_ROOT:-$app_root/downloads}
+    mkdir -p "$app_root" "$download_root"
     if [ "$(id -u)" = "0" ] && [ "$PUID" != "0" ]; then
         echo "Setting up directory permissions..."
         chown -R "${PUID}:${PGID}" /app /etc/nginx /var/lib/nginx /var/log/nginx /run/nginx.pid /etc/nginx/nginx.conf
+        chown -R "${PUID}:${PGID}" "$app_root"/.
         # Only own the mount root; do not recursively change unrelated HDD content.
         chown "${PUID}:${PGID}" "$download_root"
     fi
