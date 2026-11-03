@@ -7,7 +7,6 @@ import http.cookiejar
 import http.cookies
 import json
 import os
-import re
 import ssl
 import subprocess
 import time
@@ -108,12 +107,13 @@ def main():
         raise AssertionError("HTTPS health failed: check public forwarded scheme and host/port")
 
     logs = subprocess.check_output(["docker", "logs", args.container], stderr=subprocess.STDOUT).decode()
-    match = re.search(r"one-time bootstrap code \(expires in 15 minutes\): (\S+)", logs)
-    assert match, "Disposable container did not produce its bootstrap code"
+    assert "one-time bootstrap code" not in logs, "Obsolete setup code is still generated"
     credentials = {"username": "proxy-test-admin", "password": "Disposable-TGFlow-proxy-test-password"}
-    status, _, headers = https.request("/api/auth/bootstrap", {**credentials, "bootstrapToken": match[1]})
+    status, _, headers = https.request("/api/auth/bootstrap", credentials)
     assert status == 201, f"HTTPS bootstrap rejected with status {status}"
     assert_cookies(headers, https_secure)
+    assert https.request("/api/auth/bootstrap/status")[1] == {"required": False}
+    assert https.request("/api/auth/bootstrap", credentials)[0] == 404
     assert https.request("/api/auth/session")[0] == 200
     https.assert_legacy_session(https_secure)
     assert https.request("/api/auth/logout", {})[0] == 403

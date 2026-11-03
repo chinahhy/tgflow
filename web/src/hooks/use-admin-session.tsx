@@ -18,18 +18,18 @@ export interface AdminSession {
   absoluteExpiresAt: number;
 }
 
-type SessionStatus = "loading" | "bootstrap" | "unauthenticated" | "authenticated";
+type SessionStatus =
+  | "loading"
+  | "bootstrap"
+  | "unauthenticated"
+  | "authenticated";
 
 interface AdminSessionContextValue {
   status: SessionStatus;
   session: AdminSession | null;
   sessionExpired: boolean;
   login: (username: string, password: string) => Promise<void>;
-  bootstrap: (
-    bootstrapToken: string,
-    username: string,
-    password: string,
-  ) => Promise<void>;
+  bootstrap: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -91,18 +91,15 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     setStatus("authenticated");
   }, []);
 
-  const bootstrap = useCallback(
-    async (bootstrapToken: string, username: string, password: string) => {
-      const activeSession = await request<AdminSession>("/auth/bootstrap", {
-        method: "POST",
-        body: JSON.stringify({ bootstrapToken, username, password }),
-      });
-      setSession(activeSession);
-      setSessionExpired(false);
-      setStatus("authenticated");
-    },
-    [],
-  );
+  const bootstrap = useCallback(async (username: string, password: string) => {
+    const activeSession = await request<AdminSession>("/auth/bootstrap", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    setSession(activeSession);
+    setSessionExpired(false);
+    setStatus("authenticated");
+  }, []);
 
   const logout = useCallback(async () => {
     try {

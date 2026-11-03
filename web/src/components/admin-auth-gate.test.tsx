@@ -80,13 +80,19 @@ describe("AdminAuthGate", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the TGFlow logo during administrator bootstrap", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn<typeof fetch>()
-        .mockResolvedValueOnce(jsonResponse(200, { required: true })),
-    );
+  it("creates the first administrator with username and password only", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(200, { required: true }))
+      .mockResolvedValueOnce(
+        jsonResponse(201, {
+          authenticated: true,
+          username: "owner",
+          idleExpiresAt: 10,
+          absoluteExpiresAt: 20,
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
 
     render(
       <AdminSessionProvider>
@@ -100,6 +106,23 @@ describe("AdminAuthGate", () => {
       await screen.findByText("Create the first administrator"),
     ).toBeVisible();
     expect(screen.getByRole("img", { name: "TGFlow logo" })).toBeVisible();
+    expect(
+      screen.queryByLabelText("One-time bootstrap code"),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Username"), {
+      target: { value: "owner" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "correct horse battery staple" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create administrator" }),
+    );
+    expect(await screen.findByText("Private Telegram files")).toBeVisible();
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({
+      username: "owner",
+      password: "correct horse battery staple",
+    });
   });
 
   it("locks the UI immediately when a session is revoked", async () => {

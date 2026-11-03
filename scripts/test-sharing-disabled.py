@@ -5,7 +5,6 @@ import base64
 import http.server
 import json
 import os
-import re
 import sqlite3
 import subprocess
 import tempfile
@@ -109,11 +108,11 @@ def verify_case(image, server, malformed):
             wait_for_health(client)
             assert Client("http://127.0.0.1:18028").request("/health")[0] == 200, "Internal API did not start on 18028"
             logs = subprocess.check_output(["docker", "logs", container], stderr=subprocess.STDOUT).decode()
-            match = re.search(r"one-time bootstrap code \(expires in 15 minutes\): (\S+)", logs)
-            assert match, "Missing disposable bootstrap code"
-            assert client.request("/api/telegram/application")[0] == 401
+            assert "one-time bootstrap code" not in logs, "Obsolete setup code is still generated"
             credentials = {"username": "sharing-test-admin", "password": "Disposable-sharing-test-password"}
-            assert client.request("/api/auth/bootstrap", {**credentials, "bootstrapToken": match[1]})[0] == 201
+            assert client.request("/api/auth/bootstrap", credentials)[0] == 201
+            assert client.request("/api/auth/bootstrap/status")[1] == {"required": False}
+            assert client.request("/api/auth/bootstrap", credentials)[0] == 404
             assert client.request("/api/auth/session")[0] == 200
             subprocess.run(["docker", "exec", container, "sh", "-ec",
                 'test "$APP_ROOT" = /data; test "$(cat /app/data/path-compatibility-probe)" = tgflow-path-fixture; '
@@ -140,6 +139,8 @@ def verify_case(image, server, malformed):
             subprocess.run(["docker", "start", container], check=True, capture_output=True)
             wait_for_health(client)
             assert client.request("/api/auth/login", credentials)[0] == 200
+            assert client.request("/api/auth/bootstrap/status")[1] == {"required": False}
+            assert client.request("/api/auth/bootstrap", credentials)[0] == 404
             status, restored = client.request("/api/telegram/application")
             assert status == 200 and restored["configured"] is True and restored["apiId"] == 123456
             assert restored["logLevel"] == 2 and restored["source"] == "saved" and "apiHash" not in restored

@@ -25,7 +25,6 @@ export function AdminAuthGate({ children }: { children: ReactNode }) {
     useAdminSession();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [bootstrapToken, setBootstrapToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -59,12 +58,11 @@ export function AdminAuthGate({ children }: { children: ReactNode }) {
     setError(null);
     try {
       if (bootstrapMode) {
-        await bootstrap(bootstrapToken, username, password);
+        await bootstrap(username, password);
       } else {
         await login(username, password);
       }
       setPassword("");
-      setBootstrapToken("");
     } catch (failure) {
       setError(
         failure instanceof Error ? failure.message : "Authentication failed",
@@ -98,7 +96,7 @@ export function AdminAuthGate({ children }: { children: ReactNode }) {
           {bootstrapMode && (
             <CardDescription className="text-center">
               {t(
-                "Use the one-time code printed by the local API process. The first administrator can be created from loopback or the same private LAN.",
+                "Set a username and password for your TGFlow administrator account.",
               )}
             </CardDescription>
           )}
@@ -112,21 +110,6 @@ export function AdminAuthGate({ children }: { children: ReactNode }) {
               >
                 {t("Your session expired or was revoked. Sign in again.")}
               </p>
-            )}
-            {bootstrapMode && (
-              <div className="space-y-2">
-                <Label htmlFor="bootstrap-token">
-                  {t("One-time bootstrap code")}
-                </Label>
-                <Input
-                  id="bootstrap-token"
-                  name="bootstrapToken"
-                  autoComplete="off"
-                  value={bootstrapToken}
-                  onChange={(event) => setBootstrapToken(event.target.value)}
-                  required
-                />
-              </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="admin-username">{t("Username")}</Label>

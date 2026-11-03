@@ -28,6 +28,7 @@ async function installApi(
   options: {
     bootstrapRequired: boolean;
     onLogout?: (csrfHeader: string | undefined) => void;
+    onBootstrap?: (body: unknown) => void;
   },
 ) {
   await page.route("http://localhost:18028/**", async (route) => {
@@ -48,6 +49,8 @@ async function installApi(
       return;
     }
     if (path === "/auth/login" || path === "/auth/bootstrap") {
+      if (path === "/auth/bootstrap")
+        options.onBootstrap?.(request.postDataJSON());
       await json(route, 200, {
         authenticated: true,
         username: "admin",
@@ -120,19 +123,30 @@ test("keeps private UI unmounted until login and sends CSRF on logout", async ({
   expect(logoutCsrf).toBe(csrfToken);
 });
 
-test("supports the local-network first-administrator bootstrap flow", async ({
+test("creates the first administrator with only a username and password", async ({
   page,
 }) => {
-  await installApi(page, { bootstrapRequired: true });
+  let submitted: unknown;
+  await installApi(page, {
+    bootstrapRequired: true,
+    onBootstrap: (body) => {
+      submitted = body;
+    },
+  });
 
   await page.goto("/");
   await expect(
     page.getByText("Create the first administrator", { exact: true }),
   ).toBeVisible();
-  await page.getByLabel("One-time bootstrap code").fill("local-bootstrap-code");
+  await expect(page.locator("input")).toHaveCount(2);
+  await expect(page.getByLabel("One-time bootstrap code")).toHaveCount(0);
   await page.getByLabel("Username").fill("admin");
   await page.getByLabel("Password").fill("correct-horse-battery-staple");
   await page.getByRole("button", { name: "Create administrator" }).click();
+  expect(submitted).toEqual({
+    username: "admin",
+    password: "correct-horse-battery-staple",
+  });
 
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 });

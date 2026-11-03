@@ -22,7 +22,7 @@ public final class AdminAuthService {
 
     private static final String ACTIVE = "ACTIVE";
 
-    private static final String BOOTSTRAP_ID = "current";
+    private static final String INITIAL_ADMIN_ID = "00000000-0000-0000-0000-000000000001";
 
     private final Vertx vertx;
 
@@ -32,7 +32,7 @@ public final class AdminAuthService {
 
     private final Argon2idPasswordHasher passwordHasher;
 
-    private final Duration bootstrapLifetime;
+    private final Duration recoveryLifetime;
 
     private final Duration idleLifetime;
 
@@ -55,7 +55,7 @@ public final class AdminAuthService {
             Pool pool,
             Clock clock,
             Argon2idPasswordHasher passwordHasher,
-            Duration bootstrapLifetime,
+            Duration recoveryLifetime,
             Duration idleLifetime,
             Duration absoluteLifetime
     ) {
@@ -63,38 +63,14 @@ public final class AdminAuthService {
         this.pool = Objects.requireNonNull(pool);
         this.clock = Objects.requireNonNull(clock);
         this.passwordHasher = Objects.requireNonNull(passwordHasher);
-        this.bootstrapLifetime = requirePositive(bootstrapLifetime, "bootstrapLifetime");
+        this.recoveryLifetime = requirePositive(recoveryLifetime, "recoveryLifetime");
         this.idleLifetime = requirePositive(idleLifetime, "idleLifetime");
         this.absoluteLifetime = requirePositive(absoluteLifetime, "absoluteLifetime");
     }
 
-    public Future<BootstrapState> initialize() {
-        return adminCount().compose(count -> {
-            if (count > 0) {
-                return pool.preparedQuery(sql("DELETE FROM admin_bootstrap_token WHERE id = ?"))
-                        .execute(Tuple.of(BOOTSTRAP_ID))
-                        .map(new BootstrapState(false, null, 0));
-            }
-            String rawToken = SecurityTokenCodec.randomToken(32);
-            long now = clock.millis();
-            long expiresAt = now + bootstrapLifetime.toMillis();
-            return pool.withTransaction(connection ->
-                            connection.preparedQuery(sql("DELETE FROM admin_bootstrap_token WHERE id = ?"))
-                                    .execute(Tuple.of(BOOTSTRAP_ID))
-                                    .compose(_ -> connection.preparedQuery(sql("""
-                                                    INSERT INTO admin_bootstrap_token
-                                                        (id, token_digest, expires_at, consumed_at, created_at)
-                                                    VALUES (?, ?, ?, NULL, ?)
-                                                    """))
-                                            .execute(Tuple.of(
-                                                    BOOTSTRAP_ID,
-                                                    SecurityTokenCodec.digest(rawToken),
-                                                    expiresAt,
-                                                    now
-                                            )))
-                    )
-                    .map(new BootstrapState(true, rawToken, expiresAt));
-        });
+    public Future<Void> initialize() {
+        // Discard obsolete setup codes when upgrading an existing installation.
+        return pool.query("DELETE FROM admin_bootstrap_token").execute().mapEmpty();
     }
 
     public Future<Boolean> bootstrapRequired() {
@@ -102,7 +78,6 @@ public final class AdminAuthService {
     }
 
     public Future<IssuedSession> bootstrap(
-            String rawBootstrapToken,
             String requestedUsername,
             char[] requestedPassword,
             boolean localNetworkRequest
@@ -122,7 +97,7 @@ public final class AdminAuthService {
         char[] password = copyPassword(requestedPassword);
         return hashPassword(password)
                 .compose(passwordHash -> createInitialAdmin(
-                        rawBootstrapToken, username, passwordHash
+                        username, passwordHash
                 ))
                 .compose(account -> issueSession(account.id(), account.username(), account.sessionVersion()))
                 .eventually(() -> {
@@ -337,7 +312,7 @@ public final class AdminAuthService {
             }
             String rawToken = SecurityTokenCodec.randomToken(32);
             long now = clock.millis();
-            long expiresAt = now + bootstrapLifetime.toMillis();
+            long expiresAt = now + recoveryLifetime.toMillis();
             return pool.withTransaction(connection ->
                             connection.preparedQuery(sql("""
                                             DELETE FROM admin_recovery_token
@@ -478,80 +453,40 @@ public final class AdminAuthService {
                 ));
     }
 
+    private static AuthException bootstrapUnavailable() {
+        return new AuthException(404, "BOOTSTRAP_NOT_AVAILABLE", "Bootstrap is not available");
+    }
+
     private Future<Account> createInitialAdmin(
-            String rawBootstrapToken,
             String username,
             Argon2idPasswordHasher.PasswordHash passwordHash
     ) {
         long now = clock.millis();
-        String accountId = UUID.randomUUID().toString();
-        return pool.withTransaction(connection ->
-                        connection.preparedQuery(sql("""
-                                        SELECT token_digest, expires_at, consumed_at
-                                        FROM admin_bootstrap_token
-                                        WHERE id = ?
-                                        """))
-                                .execute(Tuple.of(BOOTSTRAP_ID))
-                                .compose(rows -> {
-                                    Row row = first(rows);
-                                    if (row == null
-                                        || row.getValue("consumed_at") != null
-                                        || number(row, "expires_at") <= now
-                                        || !SecurityTokenCodec.matches(
-                                            rawBootstrapToken, row.getString("token_digest")
-                                    )) {
-                                        return Future.failedFuture(new AuthException(
-                                                403, "BOOTSTRAP_TOKEN_INVALID", "Bootstrap token is invalid or expired"
-                                        ));
-                                    }
-                                    return countAdmins(connection);
-                                })
-                                .compose(count -> {
-                                    if (count != 0) {
-                                        return Future.failedFuture(new AuthException(
-                                                404, "BOOTSTRAP_NOT_AVAILABLE", "Bootstrap is not available"
-                                        ));
-                                    }
-                                    return connection.preparedQuery(sql("""
-                                                    INSERT INTO admin_account
-                                                        (id, username, password_hash, password_parameters,
-                                                         status, session_version, created_at, updated_at)
-                                                    VALUES (?, ?, ?, ?, 'ACTIVE', 0, ?, ?)
-                                                    """))
-                                            .execute(Tuple.of(
-                                                    accountId,
-                                                    username,
-                                                    passwordHash.hash(),
-                                                    passwordHash.parameters(),
-                                                    now,
-                                                    now
-                                            ));
-                                })
-                                .compose(_ -> connection.preparedQuery(sql("""
-                                                UPDATE admin_bootstrap_token
-                                                SET consumed_at = ?
-                                                WHERE id = ? AND consumed_at IS NULL
-                                                """))
-                                        .execute(Tuple.of(now, BOOTSTRAP_ID)))
-                                .compose(updated -> {
-                                    if (updated.rowCount() != 1) {
-                                        return Future.failedFuture(new AuthException(
-                                                409, "BOOTSTRAP_REPLAYED", "Bootstrap token was already used"
-                                        ));
-                                    }
-                                    return Future.succeededFuture();
-                                })
-                )
+        // A stable primary key makes first-admin creation a database-enforced
+        // singleton, even when different usernames race on separate connections.
+        String accountId = INITIAL_ADMIN_ID;
+        return pool.withTransaction(connection -> countAdmins(connection)
+                        .compose(count -> {
+                            if (count != 0) {
+                                return Future.failedFuture(bootstrapUnavailable());
+                            }
+                            return connection.preparedQuery(sql("""
+                                            INSERT INTO admin_account
+                                                (id, username, password_hash, password_parameters,
+                                                 status, session_version, created_at, updated_at)
+                                            VALUES (?, ?, ?, ?, 'ACTIVE', 0, ?, ?)
+                                            """))
+                                    .execute(Tuple.of(accountId, username, passwordHash.hash(),
+                                            passwordHash.parameters(), now, now))
+                                    .mapEmpty();
+                        }))
+                .recover(failure -> adminCount().compose(count -> Future.failedFuture(
+                        count > 0 ? bootstrapUnavailable() : failure
+                )))
                 .compose(_ -> audit(
                         accountId, "BOOTSTRAP", "SUCCESS", "initial administrator created"
                 ))
-                .map(new Account(
-                        accountId,
-                        username,
-                        passwordHash,
-                        ACTIVE,
-                        0
-                ));
+                .map(new Account(accountId, username, passwordHash, ACTIVE, 0));
     }
 
     private Future<IssuedSession> issueSession(String accountId, String username, long sessionVersion) {

@@ -5,14 +5,6 @@ public final class AdminAuthModels {
     private AdminAuthModels() {
     }
 
-    public record BootstrapState(boolean required, String oneTimeToken, long expiresAt) {
-        @Override
-        public String toString() {
-            return "BootstrapState[required=%s, oneTimeToken=[REDACTED], expiresAt=%d]"
-                    .formatted(required, expiresAt);
-        }
-    }
-
     public record AdminPrincipal(
             String sessionId,
             String accountId,

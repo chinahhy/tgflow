@@ -133,7 +133,8 @@ test("mobile bootstrap translates and fits the viewport", async ({ page }) => {
   await mockApi(page, true);
   await page.goto("/");
   await expect(page.getByText("创建首个管理员", { exact: true })).toBeVisible();
-  await page.getByLabel("一次性初始化码").fill("local-test-code");
+  await expect(page.locator("input")).toHaveCount(2);
+  await expect(page.getByLabel("一次性初始化码")).toHaveCount(0);
   await page.getByLabel("用户名", { exact: true }).fill("admin");
   await page
     .getByLabel("密码", { exact: true })

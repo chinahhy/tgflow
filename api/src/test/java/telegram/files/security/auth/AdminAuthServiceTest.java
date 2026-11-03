@@ -37,17 +37,11 @@ class AdminAuthServiceTest {
 
         createSchema(pool)
                 .compose(_ -> service.initialize())
-                .compose(bootstrap -> {
-                    context.verify(() -> {
-                        assertTrue(bootstrap.required());
-                        assertNotNull(bootstrap.oneTimeToken());
-                        assertFalse(bootstrap.oneTimeToken().isBlank());
-                    });
+                .compose(_ -> service.bootstrapRequired())
+                .compose(required -> {
+                    context.verify(() -> assertTrue(required));
                     return service.bootstrap(
-                            bootstrap.oneTimeToken(),
-                            "owner",
-                            "correct horse battery staple".toCharArray(),
-                            true
+                            "owner", "correct horse battery staple".toCharArray(), true
                     );
                 })
                 .compose(session -> {
@@ -134,8 +128,7 @@ class AdminAuthServiceTest {
 
         createSchema(pool)
                 .compose(_ -> service.initialize())
-                .compose(bootstrap -> service.bootstrap(
-                        bootstrap.oneTimeToken(),
+                .compose(_ -> service.bootstrap(
                         "owner",
                         "correct horse battery staple".toCharArray(),
                         true
@@ -188,8 +181,7 @@ class AdminAuthServiceTest {
 
         createSchema(pool)
                 .compose(_ -> service.initialize())
-                .compose(bootstrap -> service.bootstrap(
-                                bootstrap.oneTimeToken(),
+                .compose(_ -> service.bootstrap(
                                 "owner",
                                 "correct horse battery staple".toCharArray(),
                                 false
@@ -217,6 +209,60 @@ class AdminAuthServiceTest {
                     assertTrue(rejected);
                     context.completeNow();
                 })));
+    }
+
+    @Test
+    void directSetupCreatesOnlyOneAdminAndStaysClosedAfterRestart(
+            Vertx vertx, VertxTestContext context
+    ) {
+        Pool pool = JDBCPool.pool(vertx,
+                new JDBCConnectOptions().setJdbcUrl("jdbc:sqlite::memory:"),
+                new PoolOptions().setMaxSize(1));
+        AdminAuthService service = new AdminAuthService(vertx, pool);
+        createSchema(pool)
+                .compose(_ -> pool.query("""
+                        INSERT INTO admin_bootstrap_token
+                        (id, token_digest, expires_at, consumed_at, created_at)
+                        VALUES ('current', 'obsolete-code-digest', 9999999999999, NULL, 0)
+                        """).execute())
+                .compose(_ -> service.initialize())
+                .compose(_ -> pool.query("SELECT COUNT(*) AS total FROM admin_bootstrap_token").execute())
+                .compose(rows -> {
+                    context.verify(() -> assertEquals(0, ((Number) rows.iterator().next().getValue("total")).intValue()));
+                    var first = service.bootstrap("first-owner", "correct horse battery staple".toCharArray(), true)
+                            .map(true).recover(failure -> rejectedSetup(context, failure));
+                    var second = service.bootstrap("second-owner", "correct horse battery staple".toCharArray(), true)
+                            .map(true).recover(failure -> rejectedSetup(context, failure));
+                    return Future.all(first, second);
+                })
+                .compose(results -> {
+                    context.verify(() -> assertNotEquals(results.<Boolean>resultAt(0), results.<Boolean>resultAt(1)));
+                    return pool.query("SELECT COUNT(*) AS total FROM admin_account").execute();
+                })
+                .compose(rows -> {
+                    context.verify(() -> assertEquals(1, ((Number) rows.iterator().next().getValue("total")).intValue()));
+                    return service.initialize();
+                })
+                .compose(_ -> service.bootstrapRequired())
+                .compose(required -> {
+                    context.verify(() -> assertFalse(required));
+                    return service.bootstrap("replacement-owner", "correct horse battery staple".toCharArray(), true)
+                            .map(true).recover(failure -> rejectedSetup(context, failure));
+                })
+                .eventually(pool::close)
+                .onComplete(context.succeeding(created -> context.verify(() -> {
+                    assertFalse(created);
+                    context.completeNow();
+                })));
+    }
+
+    private static Future<Boolean> rejectedSetup(VertxTestContext context, Throwable failure) {
+        context.verify(() -> {
+            var auth = assertInstanceOf(AdminAuthModels.AuthException.class, failure);
+            assertEquals(404, auth.statusCode());
+            assertEquals("BOOTSTRAP_NOT_AVAILABLE", auth.errorCode());
+        });
+        return Future.succeededFuture(false);
     }
 
     private static Future<Void> createSchema(Pool pool) {

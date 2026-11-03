@@ -45,7 +45,6 @@ import telegram.files.security.SafePathResolver;
 import telegram.files.security.SlidingWindowRateLimiter;
 import telegram.files.security.auth.AdminAuthModels.AdminPrincipal;
 import telegram.files.security.auth.AdminAuthModels.AuthException;
-import telegram.files.security.auth.AdminAuthModels.BootstrapState;
 import telegram.files.security.auth.AdminAuthModels.IssuedSession;
 import telegram.files.security.auth.AdminAuthService;
 
@@ -91,21 +90,10 @@ public class HttpVerticle extends AbstractVerticle {
 
     private AdminAuthService adminAuthService;
 
-    private BootstrapState bootstrapState;
-
     @Override
     public void start(Promise<Void> startPromise) {
         adminAuthService = new AdminAuthService(vertx, DataVerticle.pool);
         adminAuthService.initialize()
-                .onSuccess(state -> {
-                    bootstrapState = state;
-                    if (state.required()) {
-                        System.out.println(
-                                "Telegram Files one-time bootstrap code (expires in 15 minutes): "
-                                + state.oneTimeToken()
-                        );
-                    }
-                })
                 .compose(_ -> initHttpServer())
                 .compose(_ -> initTelegramVerticles())
                 .compose(_ -> AutomationsHolder.INSTANCE.init())
@@ -386,11 +374,9 @@ public class HttpVerticle extends AbstractVerticle {
         if (body == null) {
             return;
         }
-        String bootstrapToken = body.getString("bootstrapToken");
         String username = body.getString("username");
         String password = body.getString("password");
         adminAuthService.bootstrap(
-                        bootstrapToken,
                         username,
                         password == null ? null : password.toCharArray(),
                         OriginPolicy.isLocalNetwork(source)
