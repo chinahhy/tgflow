@@ -112,8 +112,7 @@ test("keeps private UI unmounted until login and sends CSRF on logout", async ({
     name: "Log out",
     exact: true,
   });
-  await logoutButton.hover();
-  await expect(page.getByRole("tooltip", { name: "Log out" })).toBeVisible();
+  await expect(logoutButton).toBeVisible();
   await logoutButton.click();
   await expect(
     page.getByText("Administrator sign in", { exact: true }),

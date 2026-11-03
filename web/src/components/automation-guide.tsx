@@ -8,7 +8,7 @@ export function AutomationGuide() {
   const sections = [
     {
       title: "1. Build a searchable index",
-      text: "Open a chat and its automation settings. Enable Preload, and leave Auto Download and Transfer off. Preload indexes file information without downloading attachments.",
+      text: "Open Automations, choose an account and chat, then enable Preload. Leave Auto Download and Transfer off to index file information without downloading attachments.",
     },
     {
       title: "2. Match the files you need",

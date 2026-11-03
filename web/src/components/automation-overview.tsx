@@ -51,7 +51,7 @@ function enabledCount(item: AutomationChatOverview) {
 }
 
 function chatHref(item: AutomationChatOverview) {
-  return `/chats?id=${item.telegramId}&chatId=${item.chatId}`;
+  return `/automations?id=${item.telegramId}&chatId=${item.chatId}#automation-editor`;
 }
 
 function fallback(value?: string) {

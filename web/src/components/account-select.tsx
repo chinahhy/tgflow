@@ -13,7 +13,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Ellipsis } from "lucide-react";
 import { type useTelegramAccount } from "@/hooks/use-telegram-account";
 
-type AccountSelectProps = ReturnType<typeof useTelegramAccount>;
+type AccountSelectProps = ReturnType<typeof useTelegramAccount> & {
+  disabled?: boolean;
+  ariaLabel?: string;
+};
 
 export default function AccountSelect({
   isLoading,
@@ -21,13 +24,19 @@ export default function AccountSelect({
   accountId,
   account,
   handleAccountChange,
+  disabled,
+  ariaLabel,
 }: AccountSelectProps) {
   useLocale();
   const accounts = getAccounts("active");
 
   return (
-    <Select value={accountId} onValueChange={handleAccountChange}>
-      <SelectTrigger className="w-full md:w-[200px]">
+    <Select
+      disabled={disabled}
+      value={accountId}
+      onValueChange={handleAccountChange}
+    >
+      <SelectTrigger aria-label={ariaLabel} className="w-full md:w-[200px]">
         <SelectValue placeholder={t("Select account ...")}>
           {account ? (
             <div className="flex items-center gap-2">

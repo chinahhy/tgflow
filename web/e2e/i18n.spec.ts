@@ -146,7 +146,9 @@ test("mobile bootstrap translates and fits the viewport", async ({ page }) => {
   await screenshot(page, "tgflow-zh-mobile.png");
   await page.getByRole("button", { name: "创建管理员", exact: true }).click();
   await expect(page.getByRole("heading", { name: "概览" })).toBeVisible();
+  await page.getByRole("button", { name: "打开导航" }).click();
   await page.getByRole("button", { name: "切换语言" }).click();
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();

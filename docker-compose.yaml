@@ -7,7 +7,7 @@ services:
       PUID: 0
       PGID: 0
     ports:
-      - "8026:8026"
+      - "8027:8027"
     volumes:
       - ./tgflow:/data
       - ./downloads:/downloads

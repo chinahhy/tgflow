@@ -128,6 +128,7 @@ export default function SettingsPage() {
             />
           </div>
           <Proxys
+            key={accounts.accountId ?? "profiles"}
             telegramId={accounts.accountId}
             proxyName={accounts.account?.proxy}
             enableSelect

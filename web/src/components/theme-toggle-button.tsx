@@ -1,40 +1,59 @@
 "use client";
 import { useLocale } from "@/hooks/use-locale";
 import { t } from "@/lib/i18n";
-
-import { Toggle } from "@/components/ui/toggle";
-import { Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
-export default function ThemeToggleButton() {
+const modes = [
+  { value: "system", label: "Follow system", icon: Monitor },
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+];
+export default function ThemeToggleButton({
+  compact = true,
+}: {
+  compact?: boolean;
+}) {
   useLocale();
   const { theme, setTheme } = useTheme();
-
+  const current = modes.find((mode) => mode.value === theme) ?? modes[0]!;
+  const Icon = current.icon;
   return (
-    <Toggle
-      variant="default"
-      size="sm"
-      className="group size-9 data-[state=on]:bg-transparent data-[state=on]:hover:bg-muted"
-      pressed={theme === "dark"}
-      onPressedChange={() =>
-        setTheme((prev) => (prev === "dark" ? "light" : "dark"))
-      }
-      aria-label={t(
-        theme === "dark" ? "Switch to light mode" : "Switch to dark mode",
-      )}
-    >
-      <Moon
-        size={16}
-        strokeWidth={2}
-        className="shrink-0 scale-0 opacity-0 transition-all group-data-[state=on]:scale-100 group-data-[state=on]:opacity-100"
-        aria-hidden="true"
-      />
-      <Sun
-        size={16}
-        strokeWidth={2}
-        className="absolute shrink-0 scale-100 opacity-100 transition-all group-data-[state=on]:scale-0 group-data-[state=on]:opacity-0"
-        aria-hidden="true"
-      />
-    </Toggle>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size={compact ? "icon" : "default"}
+          aria-label={t("Choose theme")}
+          title={t("Choose theme")}
+          className={cn(!compact && "w-full justify-start gap-3")}
+        >
+          <Icon aria-hidden="true" />
+          {!compact && (
+            <span>{t("Theme: {mode}", { mode: t(current.label) })}</span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start">
+        <DropdownMenuRadioGroup value={current.value} onValueChange={setTheme}>
+          {modes.map(({ value, label, icon: ModeIcon }) => (
+            <DropdownMenuRadioItem key={value} value={value}>
+              <ModeIcon className="mr-2 size-4" aria-hidden="true" />
+              {t(label)}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

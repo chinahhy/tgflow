@@ -60,7 +60,8 @@ export default async function RootLayout({
           <LocalStorageProvider>
             <ThemeProvider
               attribute="class"
-              defaultTheme="light"
+              defaultTheme="system"
+              enableSystem
               disableTransitionOnChange
             >
               <AdminSessionProvider>

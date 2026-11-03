@@ -22,7 +22,13 @@ import { Toggle } from "./ui/toggle";
 import { TooltipWrapper } from "@/components/ui/tooltip";
 import useIsMobile from "@/hooks/use-is-mobile";
 
-export default function ChatSelect({ disabled }: { disabled: boolean }) {
+export default function ChatSelect({
+  disabled,
+  onChatChange,
+}: {
+  disabled: boolean;
+  onChatChange?: (id: string) => void;
+}) {
   useLocale();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -52,6 +58,7 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
     <Button
       variant="outline"
       role="combobox"
+      aria-label={t("Select chat ...")}
       aria-expanded={open}
       disabled={disabled}
       className="h-10 w-full justify-between gap-3 px-3 md:w-[250px]"
@@ -126,7 +133,7 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
               key={chat.id}
               value={chat.id}
               onSelect={(currentValue) => {
-                handleChatChange(currentValue);
+                (onChatChange ?? handleChatChange)(currentValue);
                 setOpen(false);
               }}
               className="px-2 py-2"

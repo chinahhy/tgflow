@@ -31,7 +31,6 @@ import { useLocale } from "@/hooks/use-locale";
 import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAdminSession } from "@/hooks/use-admin-session";
-import { TooltipWrapper } from "@/components/ui/tooltip";
 
 const navigation = [
   { href: "/", label: "Overview", icon: Home },
@@ -93,6 +92,42 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
     </Link>
   );
+  const controls = (compact: boolean) => (
+    <div
+      role="group"
+      aria-label={t("Application controls")}
+      className={cn("mt-auto border-t p-4", compact && "px-2")}
+    >
+      <div className={cn("flex flex-col gap-1", compact && "items-center")}>
+        <LanguageSwitcher compact={compact} fullWidth={!compact} />
+        <ThemeToggleButton compact={compact} />
+        <Button
+          type="button"
+          variant="ghost"
+          size={compact ? "icon" : "default"}
+          className={cn(!compact && "w-full justify-start gap-3")}
+          aria-label={t("Log out")}
+          title={t("Log out")}
+          disabled={loggingOut}
+          onClick={() => {
+            setLoggingOut(true);
+            void logout().finally(() => setLoggingOut(false));
+          }}
+        >
+          <LogOut aria-hidden="true" />
+          {!compact && <span>{t("Log out")}</span>}
+        </Button>
+      </div>
+      <p
+        className={cn(
+          "mt-4 px-3 text-xs text-muted-foreground",
+          compact && "px-0 text-center",
+        )}
+      >
+        {compact ? "dev" : "TGFlow · dev"}
+      </p>
+    </div>
+  );
   return (
     <div className="tgflow-shell flex min-h-dvh bg-background text-foreground">
       <aside
@@ -118,18 +153,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             {collapsed ? <ChevronsRight /> : <ChevronsLeft />}
           </Button>
         </div>
-        {links(collapsed)}
-        <p
-          className={cn(
-            "mt-auto p-7 text-xs text-muted-foreground",
-            collapsed && "px-2 text-center",
-          )}
-        >
-          <span>{collapsed ? "dev" : "TGFlow · dev"}</span>
-        </p>
+        <div className="min-h-0 flex-1 overflow-y-auto py-1">
+          {links(collapsed)}
+        </div>
+        {controls(collapsed)}
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="flex h-16 items-center justify-between gap-3 px-5 md:h-12 md:justify-end md:px-11">
+        <header className="flex h-16 items-center px-5 md:hidden">
           <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
             <DialogTrigger asChild>
               <Button
@@ -142,38 +172,23 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Button>
             </DialogTrigger>
             <DialogContent
-              className="left-0 top-0 flex h-dvh w-[292px] max-w-[85vw] translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-background p-0"
+              className="tgflow-shell left-0 top-0 flex h-dvh w-[292px] max-w-[85vw] translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-background p-0"
               aria-describedby={undefined}
             >
               <DialogTitle className="sr-only">
                 {t("Main navigation")}
               </DialogTitle>
               <div className="flex h-24 items-center px-7">{brand(false)}</div>
-              {links(false)}
+              <div className="min-h-0 flex-1 overflow-y-auto py-1">
+                {links(false)}
+              </div>
+              {controls(false)}
             </DialogContent>
           </Dialog>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-            <ThemeToggleButton />
-            <TooltipWrapper content={t("Log out")}>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={t("Log out")}
-                disabled={loggingOut}
-                onClick={() => {
-                  setLoggingOut(true);
-                  void logout().finally(() => setLoggingOut(false));
-                }}
-              >
-                <LogOut />
-              </Button>
-            </TooltipWrapper>
-          </div>
         </header>
         <main
           id="main-content"
-          className="mx-auto max-w-[1680px] px-5 pb-10 md:px-11"
+          className="mx-auto max-w-[1680px] px-5 pb-10 md:px-11 md:pt-10"
         >
           {children}
         </main>

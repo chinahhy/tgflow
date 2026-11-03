@@ -20,39 +20,16 @@ import { useToast } from "@/hooks/use-toast";
 import { AutomationButton } from "@/components/automation-button";
 import { useTelegramChat } from "@/hooks/use-telegram-chat";
 import { Label } from "@/components/ui/label";
+import {
+  defaultAutomation,
+  automationValidationError,
+} from "@/lib/automation-settings";
 import { type Auto } from "@/lib/types";
 import { Badge } from "./ui/badge";
 import AutomationForm from "@/components/automation-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, FolderSync, PackageSearch } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-
-const DEFAULT_AUTO: Auto = {
-  preload: {
-    enabled: false,
-  },
-  download: {
-    enabled: false,
-    rule: {
-      query: "",
-      fileTypes: [],
-      downloadHistory: false,
-      downloadCommentFiles: false,
-      filterExpr: "",
-    },
-  },
-  transfer: {
-    enabled: false,
-    rule: {
-      transferHistory: false,
-      destination: "",
-      transferPolicy: "GROUP_BY_CHAT",
-      duplicationPolicy: "SKIP",
-      useCaptionName: false,
-      extra: {},
-    },
-  },
-};
 
 function StatusBadge({ enabled }: { enabled: boolean }) {
   useLocale();
@@ -117,7 +94,7 @@ export default function AutomationDialog() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [auto, setAuto] = useState<Auto>(DEFAULT_AUTO);
+  const [auto, setAuto] = useState<Auto>(defaultAutomation);
   const mutationKey =
     accountId && chat
       ? `/${accountId}/file/update-auto-settings?telegramId=${accountId}&chatId=${chat.id}`
@@ -157,7 +134,7 @@ export default function AutomationDialog() {
     if (chat?.auto) {
       setAuto(chat.auto);
     } else {
-      setAuto(DEFAULT_AUTO);
+      setAuto(defaultAutomation());
     }
   }, [chat]);
 
@@ -355,36 +332,9 @@ export default function AutomationDialog() {
               </Button>
               <Button
                 onClick={() => {
-                  const rule = auto.download.rule;
-                  if (
-                    (rule.minSize !== undefined &&
-                      (!Number.isFinite(rule.minSize) || rule.minSize < 0)) ||
-                    (rule.maxSize !== undefined &&
-                      (!Number.isFinite(rule.maxSize) ||
-                        rule.maxSize < (rule.minSize ?? 0)))
-                  ) {
-                    toast({
-                      variant: "warning",
-                      description: t(
-                        "Maximum size must be greater than or equal to minimum size.",
-                      ),
-                    });
-                    return;
-                  }
-                  const folderPathRegex =
-                    /^[\/\\]?(?:[^<>:"|?*\/\\]+[\/\\]?)*$/;
-                  if (
-                    auto?.transfer.enabled &&
-                    (auto?.transfer.rule.destination.length === 0 ||
-                      !folderPathRegex.test(auto?.transfer.rule.destination))
-                  ) {
-                    toast({
-                      variant: "warning",
-                      title: t("Invalid destination folder"),
-                      description: t(
-                        "Please enter a valid destination folder path",
-                      ),
-                    });
+                  const error = automationValidationError(auto);
+                  if (error) {
+                    toast({ variant: "warning", description: t(error) });
                     return;
                   }
                   if (!mutationKey) {

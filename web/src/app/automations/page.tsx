@@ -1,6 +1,7 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeading } from "@/components/app-shell";
+import { AutomationWorkspace } from "@/components/automation-workspace";
 import { AutomationOverview } from "@/components/automation-overview";
 import { AutomationGuide } from "@/components/automation-guide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,15 +20,18 @@ export default function AutomationsPage() {
       />
       <Tabs
         value={tab}
-        onValueChange={(value) =>
-          router.replace(`/automations?tab=${value}`, { scroll: false })
-        }
+        onValueChange={(value) => {
+          const next = new URLSearchParams(params.toString());
+          next.set("tab", value);
+          router.replace(`/automations?${next}`, { scroll: false });
+        }}
       >
         <TabsList className="mb-6">
           <TabsTrigger value="rules">{t("Configured chats")}</TabsTrigger>
           <TabsTrigger value="guide">{t("Setup guide")}</TabsTrigger>
         </TabsList>
         <TabsContent value="rules">
+          <AutomationWorkspace />
           <AutomationOverview />
         </TabsContent>
         <TabsContent value="guide">

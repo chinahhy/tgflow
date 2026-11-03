@@ -2,7 +2,7 @@
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ import {
   Unplug,
 } from "lucide-react";
 import { type Proxy } from "@/lib/types";
+import { parseProxyProfiles } from "@/lib/proxy-profiles";
 import { cn, parseProxyString } from "@/lib/utils";
 import useSWRMutation from "swr/mutation";
 import { request } from "@/lib/api";
@@ -49,6 +50,7 @@ import { mutate } from "swr";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export interface ProxysProps {
+  inDialog?: boolean;
   enableSelect?: boolean;
   telegramId?: string;
   proxyName?: string;
@@ -56,16 +58,18 @@ export interface ProxysProps {
 }
 
 export default function Proxys({
+  inDialog = false,
   enableSelect,
   telegramId,
   proxyName,
   onProxyNameChange,
 }: ProxysProps) {
   useLocale();
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, isLoading } = useSettings();
   const [innerProxyName, setInnerProxyName] = useState(proxyName ?? "");
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [editingProxy, setEditingProxy] = useState<Proxy | null>(null);
+  const proxyNameInput = useRef<HTMLInputElement>(null);
   const [formState, setFormState] = useState<Proxy>({
     name: "",
     server: "",
@@ -99,17 +103,25 @@ export default function Proxys({
       },
     );
 
-  // Parse proxy settings
-  const proxys = (
-    (settings?.proxys
-      ? JSON.parse(settings.proxys)
-      : {
-          items: [],
-        }) as {
-      items: Proxy[];
+  const { items: proxys, invalid: invalidProxys } = parseProxyProfiles(
+    settings?.proxys,
+  );
+  const [saving, setSaving] = useState(false);
+  const saveProfiles = async (items: Proxy[]) => {
+    setSaving(true);
+    try {
+      await updateSettings({ proxys: JSON.stringify({ items }) });
+      return true;
+    } catch {
+      toast({
+        variant: "error",
+        description: t("Unable to save proxy settings"),
+      });
+      return false;
+    } finally {
+      setSaving(false);
     }
-  ).items;
-
+  };
   // Open dialog for adding or editing proxy
   const handleOpenDialog = (proxy: Proxy | null = null): void => {
     setEditingProxy(proxy);
@@ -134,30 +146,47 @@ export default function Proxys({
   };
 
   // Delete proxy with confirmation
-  const handleDeleteProxy = (proxy: Proxy): void => {
+  const handleDeleteProxy = async (proxy: Proxy) => {
     if (
+      !invalidProxys &&
       confirm(
         t("Are you sure you want to delete the proxy {name}?", {
           name: proxy.name,
         }),
       )
-    ) {
-      const updatedProxys = proxys.filter((p) => p.name !== proxy.name);
-      void updateSettings({
-        proxys: JSON.stringify({
-          items: updatedProxys,
-        }),
-      });
-    }
+    )
+      await saveProfiles(proxys.filter((item) => item.name !== proxy.name));
   };
 
-  // Save proxy (either add or edit)
-  const handleSaveProxy = (): void => {
-    const updatedProxys = editingProxy
-      ? proxys.map((p) => (p.name === editingProxy.name ? formState : p))
+  const handleSaveProxy = async () => {
+    if (invalidProxys) return;
+    if (parseProxyProfiles({ items: [formState] }).invalid) {
+      toast({
+        variant: "warning",
+        description: t(
+          "Enter a proxy name, server and a port between 1 and 65535.",
+        ),
+      });
+      return;
+    }
+    if (
+      proxys.some(
+        (item) =>
+          item.name === formState.name && item.name !== editingProxy?.name,
+      )
+    ) {
+      toast({
+        variant: "warning",
+        description: t("Proxy name already exists"),
+      });
+      return;
+    }
+    const items = editingProxy
+      ? proxys.map((item) =>
+          item.name === editingProxy.name ? formState : item,
+        )
       : [...proxys, formState];
-    void updateSettings({ proxys: JSON.stringify({ items: updatedProxys }) }); // Submit to server
-    handleCloseDialog();
+    if (await saveProfiles(items)) handleCloseDialog();
   };
 
   // Handle form input change
@@ -182,6 +211,30 @@ export default function Proxys({
 
   return (
     <div className="relative flex h-full flex-col gap-4 pb-16">
+      {invalidProxys && (
+        <div role="alert" className="rounded-md border p-4 text-sm">
+          <p>
+            {t(
+              "Saved proxy settings could not be read. The original data has not been changed.",
+            )}
+          </p>
+          <Button
+            className="mt-3"
+            variant="outline"
+            disabled={saving}
+            onClick={() => {
+              if (
+                confirm(
+                  t("Resetting will clear the saved proxy list. Continue?"),
+                )
+              )
+                void saveProfiles([]);
+            }}
+          >
+            {t("Reset proxy list")}
+          </Button>
+        </div>
+      )}
       <div className="flex flex-col gap-3 rounded-md border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
@@ -201,7 +254,10 @@ export default function Proxys({
         </div>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
           {telegramId && <ProxyPing accountId={telegramId} />}
-          <Button onClick={() => handleOpenDialog()}>
+          <Button
+            onClick={() => handleOpenDialog()}
+            disabled={isLoading || saving || invalidProxys}
+          >
             <Plus />
             {t("Add proxy")}
           </Button>
@@ -266,6 +322,7 @@ export default function Proxys({
                 size="icon"
                 variant="ghost"
                 aria-label={t("Edit {name}", { name: proxy.name })}
+                disabled={saving || invalidProxys}
                 className="size-8"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -278,10 +335,11 @@ export default function Proxys({
                 size="icon"
                 variant="ghost"
                 aria-label={t("Delete {name}", { name: proxy.name })}
+                disabled={saving || invalidProxys}
                 className="size-8 text-destructive hover:text-destructive"
                 onClick={(event) => {
                   event.stopPropagation();
-                  handleDeleteProxy(proxy);
+                  void handleDeleteProxy(proxy);
                 }}
               >
                 <Trash />
@@ -292,18 +350,25 @@ export default function Proxys({
       </div>
       {enableSelect && (
         <div className="absolute inset-x-0 bottom-0 flex flex-col-reverse items-center justify-end gap-2 border-t bg-background/95 pt-3 backdrop-blur sm:flex-row">
-          <DialogClose asChild>
-            <Button
-              className="w-full md:w-auto"
-              variant="outline"
-              type="button"
-            >
-              {t("Cancel")}
-            </Button>
-          </DialogClose>
+          {inDialog && (
+            <DialogClose asChild>
+              <Button
+                className="w-full md:w-auto"
+                variant="outline"
+                type="button"
+              >
+                {t("Cancel")}
+              </Button>
+            </DialogClose>
+          )}
           <Button
             className="w-full md:w-auto"
-            disabled={isToggleProxyMutating}
+            disabled={
+              isToggleProxyMutating ||
+              saving ||
+              invalidProxys ||
+              (!telegramId && !onProxyNameChange)
+            }
             onClick={() => handleProxySubmit()}
           >
             <Check />
@@ -312,7 +377,13 @@ export default function Proxys({
         </div>
       )}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent>
+        <DialogContent
+          aria-describedby={undefined}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            proxyNameInput.current?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span>{editingProxy ? t("Edit proxy") : t("Add proxy")}</span>
@@ -350,8 +421,10 @@ export default function Proxys({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label>{t("Name")}</Label>
+              <Label htmlFor="proxy-name">{t("Name")}</Label>
               <Input
+                id="proxy-name"
+                ref={proxyNameInput}
                 name="name"
                 value={formState.name}
                 onChange={handleInputChange}
@@ -362,10 +435,14 @@ export default function Proxys({
               <Label>{t("Proxy server")}</Label>
               <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
                 <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="proxy-server"
+                    className="text-xs text-muted-foreground"
+                  >
                     {t("Server")}
                   </Label>
                   <Input
+                    id="proxy-server"
                     name="server"
                     value={formState.server}
                     onChange={handleInputChange}
@@ -373,10 +450,14 @@ export default function Proxys({
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="proxy-port"
+                    className="text-xs text-muted-foreground"
+                  >
                     {t("Port")}
                   </Label>
                   <Input
+                    id="proxy-port"
                     name="port"
                     type="number"
                     value={formState.port}
@@ -389,10 +470,14 @@ export default function Proxys({
             <Label>{t("Authentication (optional)")}</Label>
             {formState.type === "mtproto" ? (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">
+                <Label
+                  htmlFor="proxy-secret"
+                  className="text-xs text-muted-foreground"
+                >
                   {t("Secret")}
                 </Label>
                 <Input
+                  id="proxy-secret"
                   name="secret"
                   value={formState.secret}
                   onChange={handleInputChange}
@@ -402,10 +487,14 @@ export default function Proxys({
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="proxy-username"
+                    className="text-xs text-muted-foreground"
+                  >
                     {t("Username")}
                   </Label>
                   <Input
+                    id="proxy-username"
                     name="username"
                     value={formState.username}
                     onChange={handleInputChange}
@@ -413,10 +502,14 @@ export default function Proxys({
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="proxy-password"
+                    className="text-xs text-muted-foreground"
+                  >
                     {t("Password")}
                   </Label>
                   <Input
+                    id="proxy-password"
                     name="password"
                     type="password"
                     value={formState.password}
@@ -431,7 +524,10 @@ export default function Proxys({
             <Button onClick={handleCloseDialog} variant="outline">
               {t("Cancel")}
             </Button>
-            <Button onClick={handleSaveProxy}>
+            <Button
+              onClick={() => void handleSaveProxy()}
+              disabled={isLoading || saving || invalidProxys}
+            >
               {editingProxy ? t("Save proxy") : t("Add proxy")}
             </Button>
           </DialogFooter>
@@ -467,7 +563,12 @@ function ProxyParser({ onParsed }: { onParsed: (proxys: Proxy) => void }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button size="xs" variant="ghost" onClick={() => handleParseProxy()}>
+          <Button
+            size="xs"
+            variant="ghost"
+            aria-label={t("Parse a proxy string from the clipboard")}
+            onClick={() => handleParseProxy()}
+          >
             <Copy />
           </Button>
         </TooltipTrigger>

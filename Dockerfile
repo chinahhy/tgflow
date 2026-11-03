@@ -24,7 +24,7 @@ ARG TARGETARCH
 ENV JAVA_HOME=/jre \
     PATH="/jre/bin:$PATH" \
     LANG=C.UTF-8 \
-    NGINX_PORT=8026 \
+    NGINX_PORT=8027 \
     APP_ROOT=/data \
     DOWNLOAD_ROOT=/downloads
 

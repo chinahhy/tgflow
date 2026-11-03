@@ -86,6 +86,8 @@ export async function installDevApi(
     sparse?: boolean;
     shareEnabled?: boolean | string;
     applicationConfigured?: boolean;
+    proxyValue?: unknown;
+    noAccounts?: boolean;
   } = {},
 ) {
   let application = {
@@ -97,6 +99,7 @@ export async function installDevApi(
     storageError: false,
   };
   const sockets: WebSocketRoute[] = [];
+  let proxys: unknown = options.proxyValue ?? null;
   const files = devFiles();
   const writes: {
     path: string;
@@ -174,6 +177,7 @@ export async function installDevApi(
         });
         return;
       }
+      if (path === "/settings/create" && "proxys" in body) proxys = body.proxys;
       if (path.endsWith("update-auto-settings")) auto = body as unknown as Auto;
       if (path.endsWith("toggle-pause-download")) {
         const file = files.find((item) => item.id === body.fileId);
@@ -209,19 +213,22 @@ export async function installDevApi(
     else if (path === "/auth/bootstrap/status") body = { required: false };
     else if (path === "/telegram/application") body = application;
     else if (path === "/telegrams")
-      body = [
-        {
-          id: "1",
-          name: "测试账号",
-          phoneNumber: "+10000000000",
-          status: "active",
-          rootPath: "/data/account/test",
-        },
-      ];
+      body = options.noAccounts
+        ? []
+        : [
+            {
+              id: "1",
+              name: "测试账号",
+              phoneNumber: "+10000000000",
+              status: "active",
+              rootPath: "/data/account/test",
+            },
+          ];
     else if (path === "/telegram/1/chats")
       body = [{ id: "-100", name: "测试频道", type: "channel", auto }];
     else if (path === "/settings")
       body = {
+        proxys,
         shareEnabled: options.shareEnabled ?? false,
         speedUnits: "bytes",
         tags: "",
@@ -278,12 +285,22 @@ export async function installDevApi(
             }
           : { files: [], count: null, nextFromMessageId: 900, hasMore: true };
       }
-    } else if (
-      path === "/automations/chats" ||
-      path === "/automations" ||
-      path === "/proxys"
-    )
-      body = [];
+    } else if (path === "/automations/chats")
+      body =
+        auto.download.enabled || auto.preload.enabled || auto.transfer.enabled
+          ? [
+              {
+                telegramId: "1",
+                accountName: "测试账号",
+                chatId: "-100",
+                chatName: "测试频道",
+                chatType: "channel",
+                chatAvatar: "",
+                auto: { ...auto, state: 0 },
+              },
+            ]
+          : [];
+    else if (path === "/automations" || path === "/proxys") body = [];
     await route.fulfill({ status: 200, headers, body: JSON.stringify(body) });
   });
   return {

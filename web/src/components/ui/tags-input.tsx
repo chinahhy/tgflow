@@ -8,7 +8,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useTheme } from "next-themes";
 
 interface TagsInputProps {
   value: string[];
@@ -29,7 +28,6 @@ export const TagsInput: React.FC<TagsInputProps> = ({
   const [inputValue, setInputValue] = useState<string>("");
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { theme } = useTheme();
 
   const handleAddTag = (tag: string) => {
     const trimmedTag = tag.trim();
@@ -83,7 +81,7 @@ export const TagsInput: React.FC<TagsInputProps> = ({
           isInputFocused
             ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
             : ""
-        } ${theme === "dark" ? "border-gray-700 bg-gray-900" : "border-gray-200 bg-white"}`}
+        } border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900`}
       >
         <AnimatePresence mode="popLayout">
           {value.map((tag, index) => (

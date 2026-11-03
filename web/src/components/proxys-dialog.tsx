@@ -83,7 +83,7 @@ export default function ProxysDialog({
           <DialogTitle>{t("Proxys")}</DialogTitle>
         </VisuallyHidden>
         <div className="mt-3">
-          <Proxys telegramId={telegramId} {...proxyProps} />
+          <Proxys inDialog telegramId={telegramId} {...proxyProps} />
         </div>
       </DialogContent>
     </Dialog>
