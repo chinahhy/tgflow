@@ -107,8 +107,10 @@ jobs:
             test -s "$RUNNER_TEMP/tgflow-legacy-$mode/data.db"
             docker rm -f tgflow-secure
           done
-      - name: Verify sharing and BT cannot be enabled
-        run: python3 scripts/test-sharing-disabled.py --image tgflow:ci
+      - name: Verify host startup with 8080 occupied and sharing disabled
+        run: |
+          docker stop tgflow-smoke
+          python3 scripts/test-sharing-disabled.py --image tgflow:ci
       - name: Determine branch tag and Docker Hub readiness
         id: release
         env:

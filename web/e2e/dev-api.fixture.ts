@@ -131,10 +131,10 @@ export async function installDevApi(
       },
     },
   };
-  await page.routeWebSocket("ws://localhost:8080/**", (socket) => {
+  await page.routeWebSocket("ws://localhost:8028/**", (socket) => {
     sockets.push(socket);
   });
-  await page.route("http://localhost:8080/**", async (route) => {
+  await page.route("http://localhost:8028/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;

@@ -127,7 +127,7 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     public Future<Void> initHttpServer() {
-        int port = config().getInteger("http.port", 8080);
+        int port = config().getInteger("http.port", 8028);
         String host = Config.HTTP_HOST;
         HttpServerOptions options = new HttpServerOptions()
                 .setHost(host)
@@ -143,7 +143,7 @@ public class HttpVerticle extends AbstractVerticle {
                 .requestHandler(initRouter())
                 .listen()
                 .onSuccess(_ -> log.info("API server started on {}:{}", host, port))
-                .onFailure(err -> log.error("Failed to start API server: %s".formatted(err.getMessage())))
+                .onFailure(err -> log.error("Failed to start API server on {}:{}: {}", host, port, err.getMessage()))
                 .mapEmpty();
     }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the dev image cannot start platform sharing or qBittorrent, even with enabled legacy settings."""
+"""Verify the dev image cannot start platform sharing or qBittorrent, even with enabled legacy settings and host port 8080 already occupied."""
 import argparse
 import base64
 import http.server
@@ -71,15 +71,13 @@ def wait_for_health(client):
 
 def verify_case(image, server, malformed):
     container = "tgflow-share-blocked"
-    base = "http://127.0.0.1:18027"
+    base = "http://127.0.0.1:8027"
     endpoint = f"http://127.0.0.1:{server.server_port}"
     with tempfile.TemporaryDirectory(prefix="tgflow-sharing-test-") as root:
         state = Path(root) / "state"
         state.mkdir()
         (state / "path-compatibility-probe").write_text("tgflow-path-fixture")
         environment = {
-            "APP_ENV": "dev",
-            "NGINX_PORT": "18027",
             "PUID": str(os.getuid()), "PGID": str(os.getgid()),
             "SHARE_ENABLED": "true", "SEED_PLATFORM_URL": endpoint,
             "QBITTORRENT_URL": endpoint, "QBITTORRENT_USERNAME": "test-only",
@@ -98,6 +96,7 @@ def verify_case(image, server, malformed):
             subprocess.run([*command, image], check=True, capture_output=True)
             client = Client(base)
             wait_for_health(client)
+            assert Client("http://127.0.0.1:8028").request("/health")[0] == 200, "Internal API did not start on 8028"
             logs = subprocess.check_output(["docker", "logs", container], stderr=subprocess.STDOUT).decode()
             match = re.search(r"one-time bootstrap code \(expires in 15 minutes\): (\S+)", logs)
             assert match, "Missing disposable bootstrap code"
@@ -161,7 +160,7 @@ def verify_case(image, server, malformed):
             assert client.request("/api/files?downloadStatus=completed")[0] == 200
             time.sleep(2)
             assert server.hits == [], f"Unexpected platform/qBittorrent requests: {server.hits}"
-            print(f"Sharing disabled ({'malformed' if malformed else 'enabled'} legacy settings): APIs blocked, no platform/qBittorrent requests; zero-env Telegram configuration saved and restored on /data, legacy path and non-root ownership verified")
+            print(f"Sharing disabled ({'malformed' if malformed else 'enabled'} legacy settings): APIs blocked, no platform/qBittorrent requests; zero-env Telegram configuration saved and restored on /data, legacy path and non-root ownership verified; host mode starts on 8027/8028 with 8080 occupied")
         except Exception:
             logs = subprocess.run(["docker", "logs", container], capture_output=True, text=True)
             print("\n".join(line for line in (logs.stdout + logs.stderr).splitlines()
@@ -175,7 +174,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True)
     args = parser.parse_args()
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Tripwire)
+    # Simulate the NAS service that caused the old internal API to fail under host networking.
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 8080), Tripwire)
     server.hits = []
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

@@ -76,7 +76,7 @@ Dockge 可直接使用上述 Compose。默认访问 `http://NAS地址:8027`。�
 
 默认自动识别协议与当前访问来源，无需填写 `HTTP_ALLOWED_ORIGINS` 或 `HTTP_SECURE_COOKIES`。局域网 HTTP 使用普通 Cookie，HTTPS 域名使用 Secure Cookie；账号会话与旧的 Telegram Web 会话采用一致策略。即使以前配置过局域网来源，新域名下的同源访问也会自动放行。
 
-容器入口是 **HTTP 8027**，默认映射 **8027 → 8027**。Lucky 等外层反代负责 HTTPS，目标填写 `http://NAS地址:8027`；同一 Docker 网络中可使用 `http://tgflow:8027`。外层代理应保留原始 Host 或 `X-Forwarded-Host`（含端口）、设置实际 `X-Forwarded-Proto`，并支持 WebSocket。容器会保留有效的协议和原始主机信息。
+容器入口是 **HTTP 8027**，默认映射 **8027 → 8027**；Java 内部 API 使用 **8028**，Nginx 的 API / WebSocket 转发已同步。Lucky 等外层反代负责 HTTPS，目标填写 `http://NAS地址:8027`；同一 Docker 网络中可使用 `http://tgflow:8027`。外层代理应保留原始 Host 或 `X-Forwarded-Host`（含端口）、设置实际 `X-Forwarded-Proto`，并支持 WebSocket。容器会保留有效的协议和原始主机信息。
 
 `HTTP_ALLOWED_ORIGINS` 只用于额外跨域前端；`HTTP_SECURE_COOKIES=true/false` 仍可显式覆盖自动策略。正常自用部署可省略它们。旧部署升级时，将 `6543:80` 改为 `8027:8027`；若想保留旧主机端口，可改为 `6543:8027`；健康检查由新镜像自带，无需在 Compose 重复填写。原来固定的 Cookie 参数建议删除或改为 `auto`。详见 [反向代理配置](docs/dev-guide.md#https-反向代理)。
 

@@ -20,8 +20,8 @@ async function mockApi(page: Page, bootstrap = false) {
       sameSite: "Strict",
     },
   ]);
-  await page.routeWebSocket("ws://localhost:8080/**", () => {});
-  await page.route("http://localhost:8080/**", async (route) => {
+  await page.routeWebSocket("ws://localhost:8028/**", () => {});
+  await page.route("http://localhost:8028/**", async (route) => {
     const req = route.request();
     const pathname = new URL(req.url()).pathname;
     let status = 200;

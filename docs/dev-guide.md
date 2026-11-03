@@ -80,7 +80,9 @@ API ID / Hash 供所有账号共用；Telegram 日志级别在“高级设置”
 
 ## HTTPS 反向代理
 
-容器和主机默认都使用 HTTP `8027`。Lucky 负责外层 HTTPS，后端填 `http://NAS地址:8027`；同网络容器间可用 `http://tgflow:8027`。Java 的 `8080` 仍是内部 API。外部域名监听 `6270` 等其他端口也可以，与容器端口不必相同。
+容器和主机默认都使用 HTTP `8027`。Lucky 负责外层 HTTPS，后端填 `http://NAS地址:8027`；同网络容器间可用 `http://tgflow:8027`。Java 内部 API 使用 `8028`，Nginx 的 API 和 WebSocket 转发均指向该端口。外部域名监听 `6270` 等其他端口也可以，与容器端口不必相同。
+
+手动使用 `host` 网络时，网页入口 `8027` 和内部 API `8028` 都需要空闲；此模式不使用 `ports` 映射。占用 NAS 原有的 `8080` 服务不会再阻止 TGFlow 启动，Lucky 后端仍填写 `8027`。
 
 日常自用部署无需写 `HTTP_ALLOWED_ORIGINS`、`HTTP_SECURE_COOKIES`：
 
