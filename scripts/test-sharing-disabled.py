@@ -58,6 +58,17 @@ class Client:
             return response.status, body
 
 
+def wait_for_health(client):
+    for _ in range(60):
+        try:
+            if client.request("/api/health")[0] == 200:
+                return
+        except OSError:
+            pass
+        time.sleep(1)
+    raise AssertionError("Image failed to start with legacy sharing environment")
+
+
 def verify_case(image, server, malformed):
     container = "tgflow-share-blocked"
     base = "http://127.0.0.1:18027"
@@ -85,15 +96,7 @@ def verify_case(image, server, malformed):
         try:
             subprocess.run([*command, image], check=True, capture_output=True)
             client = Client(base)
-            for _ in range(60):
-                try:
-                    if client.request("/api/health")[0] == 200:
-                        break
-                except OSError:
-                    pass
-                time.sleep(1)
-            else:
-                raise AssertionError("Image failed to start with legacy sharing environment")
+            wait_for_health(client)
             logs = subprocess.check_output(["docker", "logs", container], stderr=subprocess.STDOUT).decode()
             match = re.search(r"one-time bootstrap code \(expires in 15 minutes\): (\S+)", logs)
             assert match, "Missing disposable bootstrap code"
@@ -103,8 +106,14 @@ def verify_case(image, server, malformed):
             assert client.request("/")[0] == 200
             assert client.request("/share")[0] == 404, "Removed frontend page was exported"
 
+            # The application's SQLite connection uses an exclusive lock.
+            # Prepare legacy data offline, then verify it across a real restart.
+            subprocess.run(["docker", "stop", container], check=True, capture_output=True)
             with sqlite3.connect(state / "data.db") as db:
                 db.execute("INSERT OR REPLACE INTO setting_record (key, value) VALUES (?, ?)", ("shareEnabled", "true"))
+            subprocess.run(["docker", "start", container], check=True, capture_output=True)
+            wait_for_health(client)
+            assert client.request("/api/auth/login", credentials)[0] == 200
             assert client.request("/api/settings?keys=shareEnabled")[1]["shareEnabled"] is False
             assert client.request("/api/settings/create", {"shareEnabled": True})[0] == 200
             assert client.request("/api/settings?keys=shareEnabled")[1]["shareEnabled"] is False
