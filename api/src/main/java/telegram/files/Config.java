@@ -63,6 +63,9 @@ public class Config {
 
     public static final int TELEGRAM_LOG_LEVEL = Convert.toInt(System.getenv("TELEGRAM_LOG_LEVEL"), 0);
 
+    public static final TelegramEnvironmentProxy TELEGRAM_PROXY =
+            TelegramEnvironmentProxy.fromUrl(System.getenv("TELEGRAM_PROXY_URL"));
+
     public static final long HTTP_BODY_LIMIT_BYTES = Convert.toLong(
             System.getenv("HTTP_BODY_LIMIT_BYTES"),
             1024L * 1024L

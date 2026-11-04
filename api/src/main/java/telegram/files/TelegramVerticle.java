@@ -120,7 +120,8 @@ public class TelegramVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
         initializeTelegramGateway();
         Future.all(initEventConsumer(), initAvgSpeed(), initIdleSleep())
-                .compose(_ -> this.enableProxy(this.proxyName, tdlibClient))
+                .compose(_ -> environmentProxy() == null
+                        ? this.enableProxy(this.proxyName, tdlibClient) : Future.succeededFuture())
                 .compose(_ -> this.initDownloadStatusReconciliation())
                 .onSuccess(_ -> startPromise.complete())
                 .onFailure(startPromise::fail);
@@ -827,6 +828,9 @@ public class TelegramVerticle extends AbstractVerticle {
     }
 
     public Future<TdApi.AddedProxy> toggleProxy(JsonObject jsonObject) {
+        if (environmentProxy() != null) {
+            return Future.failedFuture("Telegram proxy is managed by TELEGRAM_PROXY_URL in Docker Compose");
+        }
         String toggleProxyName = jsonObject.getString("proxyName");
         if (Objects.equals(toggleProxyName, this.proxyName)) {
             return Future.succeededFuture();
@@ -1227,6 +1231,15 @@ public class TelegramVerticle extends AbstractVerticle {
         return TelegramApplicationSettings.instance().current();
     }
 
+    TelegramEnvironmentProxy environmentProxy() {
+        return Config.TELEGRAM_PROXY;
+    }
+
+    Future<TdApi.Ok> initializeTdlibParameters(TdApi.SetTdlibParameters request) {
+        var proxy = environmentProxy();
+        return proxy == null ? tdlibClient.execute(request) : proxy.initialize(tdlibClient, request);
+    }
+
     void retryApplicationConfiguration() {
         context.runOnContext(_ -> {
             if (!authorized && lastAuthorizationState instanceof TdApi.AuthorizationStateWaitTdlibParameters) {
@@ -1266,7 +1279,12 @@ public class TelegramVerticle extends AbstractVerticle {
                 request.applicationVersion = Start.VERSION;
                 log.trace("[%s] Initialize TDLib database and download directories".formatted(getRootId()));
 
-                tdlibClient.execute(request).onSuccess(this::handleAuthorizationResult);
+                initializeTdlibParameters(request)
+                        .onSuccess(this::handleAuthorizationResult)
+                        .onFailure(failure -> {
+                            readyPromise.tryFail("Unable to initialize Telegram connection");
+                            handleException(failure);
+                        });
                 break;
             case TdApi.AuthorizationStateWaitPhoneNumber.CONSTRUCTOR:
             case TdApi.AuthorizationStateWaitOtherDeviceConfirmation.CONSTRUCTOR:

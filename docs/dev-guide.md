@@ -70,6 +70,16 @@ API ID / Hash 供所有账号共用；Telegram 日志级别在“高级设置”
 
 旧环境变量仍兼容，WebUI 保存值优先。已有实例建议先保留旧变量更新镜像，在页面点击保存导入后，再从 Compose 删除 `TELEGRAM_API_ID`、`TELEGRAM_API_HASH`、`TELEGRAM_LOG_LEVEL`。直接换用精简 Compose 时，在页面重新填写原凭据即可；原账号记录和会话保留，保存后会恢复连接。
 
+### 在 Compose 中设置 Telegram 代理
+
+如需在登录前直接使用代理，在现有服务的 `environment` 中添加：
+
+```yaml
+TELEGRAM_PROXY_URL: http://proxy-host:6666
+```
+
+支持 `http://host:port` 和 `socks5://host:port`，需要认证时使用 `scheme://user:password@host:port`，特殊字符须做 URL 编码。示例 Compose 也可通过同名宿主机环境变量或 `.env` 传入；不设置时保持原有 WebUI 代理方式。填写后重新创建容器，程序会在每次 TDLib 初始化（含新账号登录和休眠唤醒）时暂停网络，启用代理后再开放 Telegram 连接；代理配置失败时不切换为直连。此时代理由 Compose 管理，优先于 WebUI 中保存的账号代理；修改或停用请编辑该环境变量并重建容器。普通 `HTTP_PROXY` / `HTTPS_PROXY` 不能替代此 Telegram 设置。
+
 ### 已有实例与回退
 
 建议给 dev 使用独立项目名、端口、配置目录和下载目录。不要让 main、dev 或原项目同时写同一数据库、账号会话或下载目录。

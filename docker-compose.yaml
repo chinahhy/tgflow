@@ -6,6 +6,7 @@ services:
       TZ: Asia/Shanghai
       PUID: 0
       PGID: 0
+      TELEGRAM_PROXY_URL: ${TELEGRAM_PROXY_URL:-}
     ports:
       - "8027:8027"
     volumes:
