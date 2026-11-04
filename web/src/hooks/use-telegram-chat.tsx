@@ -9,6 +9,7 @@ import { type TelegramChat } from "@/lib/types";
 import useSWR from "swr";
 import { useDebouncedCallback } from "use-debounce";
 import { type KeyedMutator } from "swr/_internal";
+import { useTelegramAccount } from "@/hooks/use-telegram-account";
 
 interface TelegramChatContextType {
   isLoading: boolean;
@@ -41,6 +42,8 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const accountId = searchParams.get("id") ?? "";
+  const { getAccounts } = useTelegramAccount();
+  const account = getAccounts().find((item) => item.id === accountId);
   const chatId = searchParams.get("chatId") ?? "";
 
   const handleQueryChange = useDebouncedCallback((search: string) => {
@@ -52,7 +55,7 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
     isLoading,
     mutate,
   } = useSWR<TelegramChat[]>(
-    accountId
+    account?.status === "active"
       ? `/telegram/${accountId}/chats?query=${query}&archived=${archived}&chatId=${chatId ?? ""}`
       : null,
   );

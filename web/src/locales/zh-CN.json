@@ -945,5 +945,9 @@
   "Select an account and chat above to start configuring automation.": "请在上方选择账号和聊天，即可开始配置自动化。",
   "Edit proxy {name}": "编辑代理 {name}",
   "Delete proxy {name}": "删除代理 {name}",
-  "Open Automations, choose an account and chat, then enable Preload. Leave Auto Download and Transfer off to index file information without downloading attachments.": "打开“自动化”，选择账号和聊天，开启“自动预加载”。保持自动下载和自动转存关闭，只建立文件信息索引，不下载附件。"
+  "Open Automations, choose an account and chat, then enable Preload. Leave Auto Download and Transfer off to index file information without downloading attachments.": "打开“自动化”，选择账号和聊天，开启“自动预加载”。保持自动下载和自动转存关闭，只建立文件信息索引，不下载附件。",
+  "Save a proxy profile, then choose it when adding a Telegram account.": "先保存代理配置，再到账号管理添加账号时选择该代理。",
+  "Apply the selected proxy to {name}. Accounts awaiting login are supported.": "将所选代理应用到 {name}，未登录的账号也可设置。",
+  "Select an account before applying a proxy.": "请先选择要使用代理的 Telegram 账号。",
+  "Unable to apply proxy": "无法应用代理"
 }

@@ -64,25 +64,26 @@ export default function ProxysDialog({
           <Button
             aria-label={t("Proxys")}
             variant="ghost"
-            size="icon"
+            size="default"
             className={cn(
-              "rounded-full bg-primary px-2 text-accent hover:bg-primary/90 hover:text-accent",
+              "bg-primary px-3 text-accent hover:bg-primary/90 hover:text-accent",
               triggerClassName,
               className,
             )}
           >
             <EarthLock className="h-4 w-4" />
+            <span>{t("Proxys")}</span>
           </Button>
         </DialogTrigger>
       </TooltipWrapper>
       <DialogContent
-        className="md:max-w-2/3 h-full w-full max-w-full md:h-3/4 md:w-2/3"
+        className="flex h-dvh w-full max-w-full flex-col overflow-hidden md:h-3/4 md:w-2/3"
         aria-describedby={undefined}
       >
         <VisuallyHidden>
           <DialogTitle>{t("Proxys")}</DialogTitle>
         </VisuallyHidden>
-        <div className="mt-3">
+        <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
           <Proxys inDialog telegramId={telegramId} {...proxyProps} />
         </div>
       </DialogContent>

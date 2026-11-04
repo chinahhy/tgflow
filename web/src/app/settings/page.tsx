@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeading } from "@/components/app-shell";
 import SettingsForm from "@/components/settings-form";
@@ -17,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import AccountSelect from "@/components/account-select";
+import { Button } from "@/components/ui/button";
 import { useTelegramAccount } from "@/hooks/use-telegram-account";
 import { useLocale } from "@/hooks/use-locale";
 import { t, translateError } from "@/lib/i18n";
@@ -26,6 +28,10 @@ export default function SettingsPage() {
   const params = useSearchParams();
   const router = useRouter();
   const accounts = useTelegramAccount();
+  const proxyAccounts = accounts.getAccounts();
+  const proxyAccount =
+    proxyAccounts.find((account) => account.id === accounts.accountId) ??
+    (proxyAccounts.length === 1 ? proxyAccounts[0] : undefined);
   const storage = useSWR<{
     appRoot: string;
     downloadRoot: string;
@@ -121,16 +127,39 @@ export default function SettingsPage() {
           )}
         </TabsContent>
         <TabsContent value="proxys">
-          <div className="mb-6">
+          <div className="mb-6 flex flex-col gap-2">
             <AccountSelect
               {...accounts}
+              includeInactive
+              accountId={proxyAccount?.id}
+              account={proxyAccount}
+              ariaLabel={t("Telegram account")}
               handleAccountChange={(id) => navigate({ id })}
             />
+            <p className="text-sm text-muted-foreground">
+              {accounts.isLoading
+                ? t("Loading...")
+                : proxyAccounts.length === 0
+                  ? t(
+                      "Save a proxy profile, then choose it when adding a Telegram account.",
+                    )
+                  : proxyAccount
+                    ? t(
+                        "Apply the selected proxy to {name}. Accounts awaiting login are supported.",
+                        { name: proxyAccount.name },
+                      )
+                    : t("Select an account before applying a proxy.")}
+            </p>
+            {!accounts.isLoading && proxyAccounts.length === 0 && (
+              <Button asChild variant="outline" className="w-fit">
+                <Link href="/accounts">{t("Go to account management")}</Link>
+              </Button>
+            )}
           </div>
           <Proxys
-            key={accounts.accountId ?? "profiles"}
-            telegramId={accounts.accountId}
-            proxyName={accounts.account?.proxy}
+            key={`${proxyAccount?.id ?? "profiles"}:${proxyAccount?.proxy ?? ""}`}
+            telegramId={proxyAccount?.id}
+            proxyName={proxyAccount?.proxy}
             enableSelect
           />
         </TabsContent>

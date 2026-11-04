@@ -945,5 +945,9 @@
   "Select an account and chat above to start configuring automation.": "Select an account and chat above to start configuring automation.",
   "Edit proxy {name}": "Edit proxy {name}",
   "Delete proxy {name}": "Delete proxy {name}",
-  "Open Automations, choose an account and chat, then enable Preload. Leave Auto Download and Transfer off to index file information without downloading attachments.": "Open Automations, choose an account and chat, then enable Preload. Leave Auto Download and Transfer off to index file information without downloading attachments."
+  "Open Automations, choose an account and chat, then enable Preload. Leave Auto Download and Transfer off to index file information without downloading attachments.": "Open Automations, choose an account and chat, then enable Preload. Leave Auto Download and Transfer off to index file information without downloading attachments.",
+  "Save a proxy profile, then choose it when adding a Telegram account.": "Save a proxy profile, then choose it when adding a Telegram account.",
+  "Apply the selected proxy to {name}. Accounts awaiting login are supported.": "Apply the selected proxy to {name}. Accounts awaiting login are supported.",
+  "Select an account before applying a proxy.": "Select an account before applying a proxy.",
+  "Unable to apply proxy": "Unable to apply proxy"
 }

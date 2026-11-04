@@ -12,13 +12,190 @@ function observeErrors(page: Page) {
   return errors;
 }
 
-async function screenshot(page: Page, name: string) {
+async function screenshot(page: Page, name: string, fullPage = false) {
   if (process.env.TGFLOW_SCREENSHOT_DIR)
     await page.screenshot({
       path: path.join(process.env.TGFLOW_SCREENSHOT_DIR, name),
       animations: "disabled",
+      fullPage,
     });
 }
+
+const proxyProfiles = JSON.stringify({
+  items: [
+    { name: "LAN", server: "192.0.2.10", port: 1080, type: "socks5" },
+    { name: "Backup", server: "192.0.2.11", port: 8080, type: "http" },
+  ],
+});
+
+test("a single account is selected automatically and proxy application persists", async ({
+  page,
+  csrfToken,
+}) => {
+  const errors = observeErrors(page);
+  const api = await installDevApi(page, { proxyValue: proxyProfiles });
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.goto("/settings?tab=proxys");
+  await expect(
+    page.getByRole("combobox", { name: "Telegram 账号" }),
+  ).toContainText("测试账号");
+  await page.getByRole("checkbox", { name: "选择 LAN", exact: true }).click();
+  const apply = page.getByRole("button", { name: "应用代理", exact: true });
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect
+    .poll(() =>
+      api.writes.filter((write) => write.path === "/telegram/1/toggle-proxy"),
+    )
+    .toHaveLength(1);
+  expect(
+    api.writes.find((write) => write.path.endsWith("/toggle-proxy")),
+  ).toMatchObject({ body: { proxyName: "LAN" }, csrf: csrfToken });
+  await expect(
+    page.getByRole("status").filter({ hasText: "已使用代理 LAN" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("checkbox", { name: "选择 LAN", exact: true }),
+  ).toBeChecked();
+  await screenshot(page, "proxy-mobile-applied.png", true);
+  await page.getByRole("checkbox", { name: "选择 LAN", exact: true }).click();
+  await apply.click();
+  await expect
+    .poll(
+      () =>
+        api.writes.filter((write) => write.path.endsWith("/toggle-proxy"))
+          .length,
+    )
+    .toBe(2);
+  expect(
+    api.writes.filter((write) => write.path.endsWith("/toggle-proxy"))[1]?.body,
+  ).toEqual({ proxyName: "" });
+  await page.reload();
+  await expect(
+    page.getByRole("checkbox", { name: "选择 LAN", exact: true }),
+  ).not.toBeChecked();
+  expect(errors).toEqual([]);
+});
+
+test("proxy settings include accounts awaiting login and keep each account selection separate", async ({
+  page,
+  csrfToken,
+}) => {
+  const errors = observeErrors(page);
+  const api = await installDevApi(page, {
+    proxyValue: proxyProfiles,
+    accounts: [
+      {
+        id: "pending",
+        name: "待登录账号",
+        status: "inactive",
+        rootPath: "/data/pending",
+        phoneNumber: "",
+        proxy: "Backup",
+      },
+      {
+        id: "2",
+        name: "第二账号",
+        status: "active",
+        rootPath: "/data/second",
+        phoneNumber: "",
+        proxy: "LAN",
+      },
+    ],
+  });
+  await page.goto("/settings?tab=proxys");
+  const apply = page.getByRole("button", { name: "应用代理", exact: true });
+  await expect(apply).toBeDisabled();
+  await expect(
+    page.getByText("请先选择要使用代理的 Telegram 账号。", { exact: true }),
+  ).toBeVisible();
+  const selector = page.getByRole("combobox", { name: "Telegram 账号" });
+  await selector.click();
+  await page.getByRole("option").filter({ hasText: "待登录账号" }).click();
+  await expect(page).toHaveURL(/settings\?tab=proxys&id=pending/);
+  await expect(
+    page.getByRole("checkbox", { name: "选择 Backup", exact: true }),
+  ).toBeChecked();
+  await page.getByRole("checkbox", { name: "选择 LAN", exact: true }).click();
+  await apply.click();
+  await expect
+    .poll(() =>
+      api.writes.find(
+        (write) => write.path === "/telegram/pending/toggle-proxy",
+      ),
+    )
+    .toMatchObject({ body: { proxyName: "LAN" }, csrf: csrfToken });
+  expect(
+    api.requests.some((url) => url.pathname === "/telegram/pending/chats"),
+  ).toBe(false);
+  await selector.click();
+  await page.getByRole("option").filter({ hasText: "第二账号" }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "选择 LAN", exact: true }),
+  ).toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: "选择 Backup", exact: true }),
+  ).not.toBeChecked();
+  await page
+    .getByRole("checkbox", { name: "选择 Backup", exact: true })
+    .click();
+  await apply.click();
+  await expect
+    .poll(() =>
+      api.writes.find((write) => write.path === "/telegram/2/toggle-proxy"),
+    )
+    .toMatchObject({ body: { proxyName: "Backup" } });
+  await page.reload();
+  await expect(selector).toContainText("第二账号");
+  await expect(
+    page.getByRole("checkbox", { name: "选择 Backup", exact: true }),
+  ).toBeChecked();
+  expect(errors).toEqual([]);
+});
+
+test("proxy profiles without an account explain how to set up a proxied login", async ({
+  page,
+}) => {
+  const api = await installDevApi(page, {
+    noAccounts: true,
+    proxyValue: proxyProfiles,
+  });
+  await page.goto("/settings?tab=proxys");
+  await expect(
+    page.getByText("先保存代理配置，再到账号管理添加账号时选择该代理。", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "添加代理", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "应用代理", exact: true }),
+  ).toBeDisabled();
+  expect(api.writes.some((write) => write.path.endsWith("/toggle-proxy"))).toBe(
+    false,
+  );
+  await page.getByRole("link", { name: "前往账号管理" }).click();
+  await expect(page).toHaveURL(/\/accounts/, { timeout: 30_000 });
+  await page.getByRole("button", { name: "添加账号", exact: true }).click();
+  const accountDialog = page.getByRole("dialog");
+  await accountDialog
+    .getByRole("button", { name: "代理", exact: true })
+    .click();
+  const proxies = page.getByRole("dialog", { name: "代理", exact: true });
+  await proxies
+    .getByRole("checkbox", { name: "选择 LAN", exact: true })
+    .click();
+  await proxies.getByRole("button", { name: "应用代理", exact: true }).click();
+  await proxies.getByRole("button", { name: "关闭", exact: true }).click();
+  await accountDialog
+    .getByRole("button", { name: "开始初始化", exact: true })
+    .click();
+  await expect
+    .poll(() => api.writes.find((write) => write.path === "/telegram/create"))
+    .toMatchObject({ body: { proxyName: "LAN" } });
+});
 
 test("proxy settings accept an empty saved object and persist add, edit and delete", async ({
   page,
@@ -201,6 +378,30 @@ test("sidebar controls work when expanded, collapsed and mobile, and theme follo
     controls.getByRole("button", { name: "选择主题" }),
   ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "打开导航" }).click();
+  const drawer = page.getByRole("dialog");
+  await expect(drawer.getByRole("navigation").getByRole("link")).toHaveCount(7);
+  for (const height of [664, 568, 430]) {
+    await page.setViewportSize({ width: 390, height });
+    const settings = drawer.getByRole("link", { name: "设置", exact: true });
+    await settings.scrollIntoViewIfNeeded();
+    const linkBox = await settings.boundingBox();
+    const controlBox = await drawer
+      .getByRole("group", { name: "应用操作" })
+      .boundingBox();
+    expect(linkBox!.y + linkBox!.height).toBeLessThanOrEqual(controlBox!.y);
+    await expect(
+      drawer.getByRole("button", { name: "退出登录", exact: true }),
+    ).toBeInViewport();
+    await expect(
+      drawer.getByRole("button", { name: "关闭", exact: true }),
+    ).toBeInViewport();
+  }
+  await page.setViewportSize({ width: 390, height: 664 });
+  await screenshot(page, "sidebar-mobile-compact.png");
+  await drawer.getByRole("link", { name: "设置", exact: true }).click();
+  await expect(drawer).not.toBeVisible();
+  await expect(page).toHaveURL(/\/settings/);
   await page.getByRole("button", { name: "打开导航" }).click();
   const mobile = page
     .getByRole("dialog")

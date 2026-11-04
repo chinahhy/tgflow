@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const activePath =
     pathname === "/accounts" && search.has("id") ? "/chats" : pathname;
   const links = (compact: boolean) => (
-    <nav aria-label={t("Main navigation")} className="flex flex-col gap-3 px-3">
+    <nav aria-label={t("Main navigation")} className="flex flex-col gap-1 px-3">
       {navigation.map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
@@ -65,7 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-current={activePath === href ? "page" : undefined}
           title={compact ? t(label) : undefined}
           className={cn(
-            "flex h-[52px] items-center gap-4 rounded-lg px-4 text-base transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:text-lg",
+            "flex h-11 shrink-0 items-center gap-3 rounded-lg px-3 text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-base",
             activePath === href && "bg-primary/10 font-medium text-primary",
             compact && "justify-center px-2",
           )}
@@ -92,11 +92,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
     </Link>
   );
-  const controls = (compact: boolean) => (
+  const controls = (compact: boolean, mobile = false) => (
     <div
       role="group"
       aria-label={t("Application controls")}
-      className={cn("mt-auto border-t p-4", compact && "px-2")}
+      className={cn(
+        "mt-auto shrink-0 border-t p-3",
+        compact && "px-2",
+        mobile && "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+      )}
     >
       <div className={cn("flex flex-col gap-1", compact && "items-center")}>
         <LanguageSwitcher compact={compact} fullWidth={!compact} />
@@ -120,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <p
         className={cn(
-          "mt-4 px-3 text-xs text-muted-foreground",
+          "mt-3 px-3 text-xs text-muted-foreground",
           compact && "px-0 text-center",
         )}
       >
@@ -133,12 +137,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside
         className={cn(
           "sticky top-0 hidden h-dvh shrink-0 flex-col border-r bg-[hsl(var(--sidebar))] transition-[width] md:flex",
-          collapsed ? "w-[76px]" : "w-[292px]",
+          collapsed ? "w-[76px]" : "w-[260px]",
         )}
       >
         <div
           className={cn(
-            "flex h-24 items-center justify-between gap-2 px-7",
+            "flex h-20 shrink-0 items-center justify-between gap-2 px-6",
             collapsed && "flex-col justify-center gap-1 px-2",
           )}
         >
@@ -172,17 +176,19 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Button>
             </DialogTrigger>
             <DialogContent
-              className="tgflow-shell left-0 top-0 flex h-dvh w-[292px] max-w-[85vw] translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-background p-0"
+              className="tgflow-shell left-0 top-0 flex h-dvh w-[280px] max-w-[85vw] translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0 bg-background p-0 pt-[env(safe-area-inset-top)] [&>button]:top-[max(1rem,env(safe-area-inset-top))]"
               aria-describedby={undefined}
             >
               <DialogTitle className="sr-only">
                 {t("Main navigation")}
               </DialogTitle>
-              <div className="flex h-24 items-center px-7">{brand(false)}</div>
+              <div className="flex h-20 shrink-0 items-center px-6">
+                {brand(false)}
+              </div>
               <div className="min-h-0 flex-1 overflow-y-auto py-1">
                 {links(false)}
               </div>
-              {controls(false)}
+              {controls(false, true)}
             </DialogContent>
           </Dialog>
         </header>

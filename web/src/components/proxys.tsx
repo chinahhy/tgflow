@@ -1,5 +1,5 @@
 "use client";
-import { t } from "@/lib/i18n";
+import { t, translateError } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 
 import React, { useRef, useState } from "react";
@@ -201,16 +201,26 @@ export default function Proxys({
   };
 
   const handleProxySubmit = async () => {
-    if (telegramId) {
-      await triggerProxy();
-    } else {
-      onProxyNameChange?.(innerProxyName);
+    try {
+      if (telegramId) {
+        await triggerProxy();
+      } else {
+        onProxyNameChange?.(innerProxyName);
+      }
+    } catch (error) {
+      toast({
+        variant: "error",
+        description:
+          error instanceof Error
+            ? translateError(error.message)
+            : t("Unable to apply proxy"),
+      });
     }
   };
   const proxyCountLabel = t("{count} proxies", { count: proxys.length });
 
   return (
-    <div className="relative flex h-full flex-col gap-4 pb-16">
+    <div className="relative flex h-full flex-col gap-4">
       {invalidProxys && (
         <div role="alert" className="rounded-md border p-4 text-sm">
           <p>
@@ -349,7 +359,7 @@ export default function Proxys({
         ))}
       </div>
       {enableSelect && (
-        <div className="absolute inset-x-0 bottom-0 flex flex-col-reverse items-center justify-end gap-2 border-t bg-background/95 pt-3 backdrop-blur sm:flex-row">
+        <div className="mt-auto flex flex-col-reverse items-center justify-end gap-2 border-t bg-background/95 pt-3 backdrop-blur sm:flex-row">
           {inDialog && (
             <DialogClose asChild>
               <Button
@@ -367,6 +377,8 @@ export default function Proxys({
               isToggleProxyMutating ||
               saving ||
               invalidProxys ||
+              (!!innerProxyName &&
+                !proxys.some((proxy) => proxy.name === innerProxyName)) ||
               (!telegramId && !onProxyNameChange)
             }
             onClick={() => handleProxySubmit()}

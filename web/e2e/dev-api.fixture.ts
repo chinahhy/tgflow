@@ -1,5 +1,5 @@
 import type { Page, WebSocketRoute } from "@playwright/test";
-import type { Auto, TelegramFile } from "../src/lib/types";
+import type { Auto, TelegramAccount, TelegramFile } from "../src/lib/types";
 
 export function devFiles(): TelegramFile[] {
   return [
@@ -88,6 +88,7 @@ export async function installDevApi(
     applicationConfigured?: boolean;
     proxyValue?: unknown;
     noAccounts?: boolean;
+    accounts?: TelegramAccount[];
   } = {},
 ) {
   let application = {
@@ -101,6 +102,19 @@ export async function installDevApi(
   const sockets: WebSocketRoute[] = [];
   let proxys: unknown = options.proxyValue ?? null;
   const files = devFiles();
+  const accounts: TelegramAccount[] =
+    options.accounts ??
+    (options.noAccounts
+      ? []
+      : [
+          {
+            id: "1",
+            name: "测试账号",
+            phoneNumber: "+10000000000",
+            status: "active",
+            rootPath: "/data/account/test",
+          },
+        ]);
   const writes: {
     path: string;
     body: Record<string, unknown>;
@@ -178,6 +192,10 @@ export async function installDevApi(
         return;
       }
       if (path === "/settings/create" && "proxys" in body) proxys = body.proxys;
+      if (path.endsWith("/toggle-proxy")) {
+        const account = accounts.find((item) => item.id === path.split("/")[2]);
+        if (account) account.proxy = String(body.proxyName ?? "");
+      }
       if (path.endsWith("update-auto-settings")) auto = body as unknown as Auto;
       if (path.endsWith("toggle-pause-download")) {
         const file = files.find((item) => item.id === body.fileId);
@@ -212,19 +230,9 @@ export async function installDevApi(
       };
     else if (path === "/auth/bootstrap/status") body = { required: false };
     else if (path === "/telegram/application") body = application;
-    else if (path === "/telegrams")
-      body = options.noAccounts
-        ? []
-        : [
-            {
-              id: "1",
-              name: "测试账号",
-              phoneNumber: "+10000000000",
-              status: "active",
-              rootPath: "/data/account/test",
-            },
-          ];
-    else if (path === "/telegram/1/chats")
+    else if (path === "/telegrams") body = accounts;
+    else if (path.endsWith("/ping")) body = { ping: 0.1 };
+    else if (/^\/telegram\/[^/]+\/chats$/.test(path))
       body = [{ id: "-100", name: "测试频道", type: "channel", auto }];
     else if (path === "/settings")
       body = {

@@ -5,6 +5,7 @@ import { useLocale } from "@/hooks/use-locale";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -16,6 +17,7 @@ import { type useTelegramAccount } from "@/hooks/use-telegram-account";
 type AccountSelectProps = ReturnType<typeof useTelegramAccount> & {
   disabled?: boolean;
   ariaLabel?: string;
+  includeInactive?: boolean;
 };
 
 export default function AccountSelect({
@@ -26,14 +28,15 @@ export default function AccountSelect({
   handleAccountChange,
   disabled,
   ariaLabel,
+  includeInactive = false,
 }: AccountSelectProps) {
   useLocale();
-  const accounts = getAccounts("active");
+  const accounts = getAccounts(includeInactive ? undefined : "active");
 
   return (
     <Select
       disabled={disabled}
-      value={accountId}
+      value={accountId ?? ""}
       onValueChange={handleAccountChange}
     >
       <SelectTrigger aria-label={ariaLabel} className="w-full md:w-[200px]">
@@ -65,28 +68,30 @@ export default function AccountSelect({
             <Ellipsis className="h-4 w-4 animate-pulse" />
           </SelectItem>
         )}
-        {accounts.map((account) => (
-          <SelectItem key={account.id} value={account.id}>
-            <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
-                <AvatarImage
-                  src={
-                    account.avatar
-                      ? `data:image/png;base64,${account.avatar}`
-                      : undefined
-                  }
-                />
-                <AvatarFallback>{account.name[0]}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <span className="font-medium">{account.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {account.phoneNumber}
-                </span>
+        <SelectGroup>
+          {accounts.map((account) => (
+            <SelectItem key={account.id} value={account.id}>
+              <div className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage
+                    src={
+                      account.avatar
+                        ? `data:image/png;base64,${account.avatar}`
+                        : undefined
+                    }
+                  />
+                  <AvatarFallback>{account.name[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="font-medium">{account.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {account.phoneNumber}
+                  </span>
+                </div>
               </div>
-            </div>
-          </SelectItem>
-        ))}
+            </SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );
