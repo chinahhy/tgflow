@@ -66,7 +66,8 @@ export default function Proxys({
 }: ProxysProps) {
   useLocale();
   const { settings, updateSettings, isLoading } = useSettings();
-  const [innerProxyName, setInnerProxyName] = useState(proxyName ?? "");
+  const [selectedProxyName, setInnerProxyName] = useState<string>();
+  const innerProxyName = selectedProxyName ?? proxyName ?? "";
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [editingProxy, setEditingProxy] = useState<Proxy | null>(null);
   const proxyNameInput = useRef<HTMLInputElement>(null);

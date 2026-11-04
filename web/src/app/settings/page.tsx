@@ -30,7 +30,7 @@ export default function SettingsPage() {
   const accounts = useTelegramAccount();
   const proxyAccounts = accounts.getAccounts();
   const proxyAccount =
-    proxyAccounts.find((account) => account.id === accounts.accountId) ??
+    proxyAccounts.find((account) => account.id === params.get("id")) ??
     (proxyAccounts.length === 1 ? proxyAccounts[0] : undefined);
   const storage = useSWR<{
     appRoot: string;
@@ -157,7 +157,7 @@ export default function SettingsPage() {
             )}
           </div>
           <Proxys
-            key={`${proxyAccount?.id ?? "profiles"}:${proxyAccount?.proxy ?? ""}`}
+            key={proxyAccount?.id ?? "profiles"}
             telegramId={proxyAccount?.id}
             proxyName={proxyAccount?.proxy}
             enableSelect

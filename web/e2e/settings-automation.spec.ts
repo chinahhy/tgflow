@@ -131,6 +131,8 @@ test("proxy settings include accounts awaiting login and keep each account selec
   ).toBe(false);
   await selector.click();
   await page.getByRole("option").filter({ hasText: "第二账号" }).click();
+  await expect(selector).toContainText("第二账号");
+  await expect(page).toHaveURL(/settings\?tab=proxys&id=2/);
   await expect(
     page.getByRole("checkbox", { name: "选择 LAN", exact: true }),
   ).toBeChecked();
@@ -140,6 +142,9 @@ test("proxy settings include accounts awaiting login and keep each account selec
   await page
     .getByRole("checkbox", { name: "选择 Backup", exact: true })
     .click();
+  await expect(
+    page.getByRole("checkbox", { name: "选择 Backup", exact: true }),
+  ).toBeChecked();
   await apply.click();
   await expect
     .poll(() =>
@@ -385,11 +390,16 @@ test("sidebar controls work when expanded, collapsed and mobile, and theme follo
     await page.setViewportSize({ width: 390, height });
     const settings = drawer.getByRole("link", { name: "设置", exact: true });
     await settings.scrollIntoViewIfNeeded();
-    const linkBox = await settings.boundingBox();
-    const controlBox = await drawer
-      .getByRole("group", { name: "应用操作" })
-      .boundingBox();
-    expect(linkBox!.y + linkBox!.height).toBeLessThanOrEqual(controlBox!.y);
+    await expect
+      .poll(async () => {
+        await settings.scrollIntoViewIfNeeded();
+        const linkBox = await settings.boundingBox();
+        const controlBox = await drawer
+          .getByRole("group", { name: "应用操作" })
+          .boundingBox();
+        return linkBox!.y + linkBox!.height - controlBox!.y;
+      })
+      .toBeLessThanOrEqual(0.5);
     await expect(
       drawer.getByRole("button", { name: "退出登录", exact: true }),
     ).toBeInViewport();
