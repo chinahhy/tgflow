@@ -1,9 +1,9 @@
 name: TGFlow CI and Docker
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, connent]
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, connent]
   workflow_dispatch:
 permissions:
   contents: read
@@ -73,6 +73,14 @@ jobs:
           done
           test "$(docker inspect --format '{{.State.Health.Status}}' tgflow-unhealthy)" = unhealthy
           docker rm -f tgflow-unhealthy
+      - name: Verify bundled video download dependencies
+        run: |
+          docker exec tgflow-smoke /opt/yt-dlp/bin/yt-dlp --version
+          docker exec tgflow-smoke /opt/yt-dlp/bin/python -c 'import yt_dlp, yt_dlp_ejs'
+          docker exec tgflow-smoke node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)'
+          docker exec tgflow-smoke ffmpeg -version
+          docker exec tgflow-smoke ffprobe -version
+          docker exec -i tgflow-smoke python3 - < scripts/test-bot-media.py
       - name: Test HTTPS reverse proxy and Secure cookies
         run: |
           mkdir -p "$RUNNER_TEMP/tgflow-proxy-tls"

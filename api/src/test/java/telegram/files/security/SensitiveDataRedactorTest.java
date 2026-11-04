@@ -10,6 +10,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class SensitiveDataRedactorTest {
 
     @Test
+    void redactsBotTokensInRequestPathsAndStandaloneText() {
+        String token = "123456789:" + "test-fixture-only-value";
+        String redacted = SensitiveDataRedactor.redact("POST https://api.telegram.org/bot" + token + "/sendMessage " + token);
+        assertFalse(redacted.contains(token));
+        assertTrue(redacted.contains("[BOT_TOKEN]"));
+    }
+
+    @Test
     void redactsCredentialsPrivateLocatorsAndLocalPaths() {
         String input = "Authorization=Bearer-secret chatId=-10042 "
                 + "api_hash=hash-secret path=/Users/example/private.bin";

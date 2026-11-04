@@ -54,6 +54,7 @@ public class Start {
                 .compose(_ -> vertx.deployVerticle(httpVerticle)
                         .onFailure(err -> log.error("Deploy http verticle failed", err))
                 )
+                .compose(_ -> vertx.deployVerticle(new telegram.files.bot.BotVerticle()))
                 .mapEmpty();
     }
 

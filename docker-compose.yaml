@@ -1,12 +1,15 @@
 services:
   tgflow:
-    image: hoya0803/tgflow:dev
+    image: tgflow:connent-local
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
       PUID: 0
       PGID: 0
       TELEGRAM_PROXY_URL: ${TELEGRAM_PROXY_URL:-}
+      TGFLOW_BOT_TOKEN: ${TGFLOW_BOT_TOKEN:-}
+      TGFLOW_BOT_ALLOWED_USER_IDS: ${TGFLOW_BOT_ALLOWED_USER_IDS:-}
+      TGFLOW_BOT_TELEGRAM_ID: ${TGFLOW_BOT_TELEGRAM_ID:-}
     ports:
       - "8027:8027"
     volumes:

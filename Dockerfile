@@ -16,11 +16,12 @@ RUN --mount=type=cache,target=/var/cache/apk \
         --compress=2 && \
     apk del binutils
 
-FROM alpine:3.18.12 AS final
+FROM alpine:3.22 AS final
 
 WORKDIR /app
 
 ARG TARGETARCH
+ARG YTDLP_VERSION=2026.10.26
 ENV JAVA_HOME=/jre \
     PATH="/jre/bin:$PATH" \
     LANG=C.UTF-8 \
@@ -31,7 +32,11 @@ ENV JAVA_HOME=/jre \
 RUN --mount=type=cache,target=/var/cache/apk \
     addgroup -S tf && \
     adduser -S -G tf tf && \
-    apk add --update-cache nginx wget curl unzip tini su-exec gettext openssl3 libstdc++ gcompat libc6-compat && \
+    apk add --update-cache nginx wget curl unzip tini su-exec gettext openssl3 libstdc++ gcompat libc6-compat python3 py3-pip ffmpeg nodejs && \
+    python3 -m venv /opt/yt-dlp && \
+    /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==${YTDLP_VERSION}" && \
+    /opt/yt-dlp/bin/yt-dlp --version && \
+    node --version && \
     rm -rf /tmp/* /var/tmp/* && \
     touch /run/nginx.pid && \
     mkdir -p /data && \

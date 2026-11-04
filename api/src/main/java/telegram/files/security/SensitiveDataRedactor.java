@@ -4,6 +4,8 @@ import java.util.regex.Pattern;
 
 public final class SensitiveDataRedactor {
 
+    private static final Pattern BOT_TOKEN = Pattern.compile("(?i)(?:bot)?[0-9]{5,}:[A-Za-z0-9_-]{20,}");
+
     private static final Pattern KEY_VALUE = Pattern.compile(
             "(?i)(authorization|cookie|access[_-]?token|refresh[_-]?token|device[_-]?code|"
                     + "opaque[_-]?source[_-]?token|tracker[_-]?credential|token|password|api[_-]?hash)"
@@ -23,7 +25,8 @@ public final class SensitiveDataRedactor {
         if (value == null || value.isEmpty()) {
             return value;
         }
-        String redacted = KEY_VALUE.matcher(value).replaceAll("$1$2[REDACTED]");
+        String redacted = BOT_TOKEN.matcher(value).replaceAll("[BOT_TOKEN]");
+        redacted = KEY_VALUE.matcher(redacted).replaceAll("$1$2[REDACTED]");
         redacted = PRIVATE_LOCATOR.matcher(redacted).replaceAll("$1$2[REDACTED]");
         return LOCAL_PATH.matcher(redacted).replaceAll("[LOCAL_PATH]");
     }

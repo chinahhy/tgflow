@@ -6,6 +6,8 @@ TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可
 
 ## dev 自定义版本
 
+**`connent` 分支新增 Telegram Bot 后台下载：发送或转发 Telegram、YouTube、B站等视频链接，后台排队并通知成功／失败。配置、构建和使用见 [Bot 使用指南](docs/bot-guide.md)。本分支 Compose 使用独立本地镜像 `tgflow:connent-local`。**
+
 当前分支实现了可折叠侧栏和七个独立页面、原名落盘、SSD／HDD 双目录、下载失败原因、大小与扩展名筛选，以及自动化配置指南。部署和使用步骤见 **[dev 使用指南](docs/dev-guide.md)**。
 
 ## 功能
@@ -30,8 +32,9 @@ TGFlow 不采用 GitHub Fork 关系。保留上游完整 Git 历史、MIT 许可
 | --- | --- | --- |
 | `main` | 稳定汉化版，优先同步上游稳定版本 | `hoya0803/tgflow:latest` |
 | `dev` | 原名下载、双盘存储、新界面与扩展筛选 | `hoya0803/tgflow:dev` |
+| `connent` | 基于 dev，接入 Telegram Bot 和网页视频下载 | 本地构建 `tgflow:connent-local`，CI 验证但不自动发布 |
 
-两条分支独立发布，dev 不会覆盖 latest，也不会自动合并回 main。本分支的自定义功能见上方 dev 使用指南。
+main/dev 分支独立发布，dev 不会覆盖 latest，也不会自动合并回 main。connent 仅验证构建与测试，不自动发布镜像。本分支的自定义功能见上方使用指南。
 
 **镜像是否已发布，请以 [Actions](https://github.com/chinahhy/tgflow/actions/workflows/docker-publish.yml) 的发布步骤及实际 Docker Hub 仓库为准。** 未设置 Docker Hub 凭据时，工作流仍执行测试、构建和容器检查，并明确跳过推送。
 
@@ -138,7 +141,7 @@ docker compose ps
 
 ## 构建与发布
 
-[TGFlow CI and Docker](.github/workflows/docker-publish.yml) 支持 main/dev 推送、PR 和手动触发，复用 [验证工作流](.github/workflows/ci.yml)：
+[TGFlow CI and Docker](.github/workflows/docker-publish.yml) 支持 main/dev/connent 推送、PR 和手动触发，复用 [验证工作流](.github/workflows/ci.yml)：
 
 1. 使用 JDK 23 / Gradle Wrapper 运行后端测试并生成 `shadowJar`。
 2. 使用 Node.js 22 / 锁文件运行 ESLint、TypeScript、Vitest、Playwright 及 Next.js 静态构建。
