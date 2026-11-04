@@ -131,6 +131,7 @@ jobs:
           tag=''
           if [ "$GITHUB_REF" = refs/heads/main ]; then tag=latest; fi
           if [ "$GITHUB_REF" = refs/heads/dev ]; then tag=dev; fi
+          if [ "$GITHUB_REF" = refs/heads/connent ]; then tag=connect; fi
           if [ "$GITHUB_EVENT_NAME" != pull_request ] && [ -n "$tag" ] && [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
             publish=true
           fi

@@ -9,12 +9,11 @@
 - 一条消息最多 10 个不同链接；每个链接一个任务，默认依次下载。默认只下载单个视频，不展开播放列表，拒绝直播；一个 Telegram 相册会保存全部附件。
 - `/start`、`/help` 查看用法，`/status` 查看自己的最近 10 个任务。
 
-## 构建与启动
+## 镜像与启动
 
-本分支的代码需要单独构建，现有 `hoya0803/tgflow:dev` 镜像不含 Bot 功能。按 [开发指南](development.md#后端与-docker) 准备后端和前端 `.docker-artifacts`，然后在本分支根目录执行：
+本分支镜像为 `hoya0803/tgflow:connect`，对应 Git 分支 `connent`。获取本分支的 Compose 和 `.env.example`，在 Compose 所在目录执行：
 
 ```bash
-docker buildx build --platform linux/amd64 --load -t tgflow:connent-local .
 cp .env.example .env
 ```
 
@@ -31,9 +30,11 @@ TELEGRAM_PROXY_URL=http://代理地址:端口
 2. `TGFLOW_BOT_ALLOWED_USER_IDS` 填写允许使用的数字用户 ID，多个用英文逗号分隔。用户 ID 与手机号、用户名、Bot ID 不同。只接受白名单用户的私聊，群聊与其他用户消息忽略。启用 Bot 后白名单不能为空。
 3. 网页视频无需登录 TGFlow 的 Telegram 账号。下载 Telegram 链接时，先在 WebUI 登录有访问权限的 Telegram 账号；只有一个可用账号时自动选择。多个账号时，填写账号管理中的 TGFlow 账号数字 ID 到 `TGFLOW_BOT_TELEGRAM_ID`。
 4. 如无需代理，留空 `TELEGRAM_PROXY_URL`。Bot API 和 yt-dlp 默认复用该代理，也可在 Compose 显式设置独立 `TGFLOW_BOT_PROXY_URL`。支持 HTTP CONNECT 与 SOCKS5。原生 TDLib 仍使用 `TELEGRAM_PROXY_URL`。
-5. 运行 `docker compose up -d`，在 Telegram 中私聊自己的 Bot，点击 Start，然后发送视频链接。
+5. 运行 `docker compose pull` 和 `docker compose up -d`，在 Telegram 中私聊自己的 Bot，点击 Start，然后发送视频链接。
 
-Compose 使用本地构建的 `tgflow:connent-local`。镜像内置 Python、固定版本 yt-dlp（包含 EJS）、Node.js 22+、FFmpeg / ffprobe。更新 yt-dlp 需重新构建镜像，可用构建参数 `--build-arg YTDLP_VERSION=版本号`，没有自动自更新任务。
+Compose 使用 `hoya0803/tgflow:connect`。镜像内置 Python、固定版本 yt-dlp（包含 EJS）、Node.js 22+、FFmpeg / ffprobe。`connent` 分支推送或手动运行 CI 后，只在全部测试通过且发布凭据齐全时，将同一个已测试镜像发布到 `connect` 标签。
+
+需要自行构建时，按 [开发指南](development.md#后端与-docker) 准备 `.docker-artifacts`，再执行 `docker buildx build --platform linux/amd64 --load -t tgflow:connent-local .`，并将 Compose 的 `image` 改为该本地标签。更新 yt-dlp 可使用构建参数 `--build-arg YTDLP_VERSION=版本号`，没有自动自更新任务。
 
 ## 存储、通知与恢复
 

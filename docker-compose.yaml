@@ -1,6 +1,6 @@
 services:
   tgflow:
-    image: tgflow:connent-local
+    image: hoya0803/tgflow:connect
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
